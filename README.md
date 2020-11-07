@@ -152,5 +152,5 @@ This project is unlicensed but may be used in uncommercial projects without rest
 
 ## Author
 
-Elias Lousseief``
+Elias Lousseief
     
