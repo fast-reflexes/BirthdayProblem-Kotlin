@@ -31,7 +31,7 @@ repositories {
 tasks.jar {
     manifest.attributes.apply {
         put("Implementation-Title", "BirthdayProblem Solver thin jar")
-        put("Implementation-Version", "1.0")
+        put("Implementation-Version", version)
         put("Main-Class", "com.bdayprob.BirthdayProblem\$CLISolver")
     }
 }
@@ -40,7 +40,7 @@ tasks.register<Jar>("fatJar") {
     archiveClassifier.set("fat")
     manifest.attributes.apply {
         put("Implementation-Title", "BirthdayProblem Solver fat jar")
-        put("Implementation-Version", "1.0")
+        put("Implementation-Version", version)
         put("Main-Class", "com.bdayprob.BirthdayProblem\$CLISolver")
     }
     from(sourceSets.main.get().output)
