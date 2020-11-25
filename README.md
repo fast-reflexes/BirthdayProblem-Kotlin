@@ -37,6 +37,7 @@ Name | Type | Effect
 `exact` | boolean | Whether to calculate `P` with exact method
 `stirling` | boolean | Whether to calculate `P` with exact method using Stirling's approximation in calculation of faculties
 `taylor` | boolean | Whether to calculate `P` with Taylor approximation 
+`prec` | integer | Decimals in the solution where applicable (in [0, 10] with default 10)
     
 ## Dependencies
 
@@ -96,15 +97,15 @@ Calculate the probability `P` of at least one non-unique birthday among `N`= 23 
 
 #### Example 2:
 
-Calculate the number of times `N` a deck of cards has to be shuffled to have a `P` = 50% probability of seeing a repeated shuffle:
+Calculate, approximatively, the number of times `N` a deck of cards has to be shuffled to have a `P` = 50% probability of seeing a repeated shuffle:
 
     > java -jar BirthdayProblem-1.0-fat.jar 52 -p 0.5 -c
 
 #### Example 3:
 
-Calculate the probability `P` of a collision in a 128-bit hash when hashing `N` = 2^32 = 4294967296 items with approximative methods and output answer as a Json object:
+Calculate, with approximative methods,  the probability `P` of a collision in a 128-bit crypto when encrypting `N` = 2^64 = 18 446 744 073 709 551 616 blocks with the same key and output answer as a Json object with at most 5 decimals:
 
-    > java -jar BirthdayProblem-1.0-fat.jar -n 32 -b -s -t -j
+    > java -jar BirthdayProblem-1.0-fat.jar 128 -n 64 -b -s -t -j --prec 5
     
 #### Help:
 
@@ -152,5 +153,13 @@ This project is unlicensed but may be used in uncommercial projects without rest
 
 ## Author
 
-Elias Lousseief
+Elias Lousseief (2020)
+
+##Change log
+
+* *v. 1.0*
+* *v. 1.1*
+  *  Added rounding upwards (ceiling) instead of regular rounding (half up) on non-logarithmic solutions for `N`.
+  *  Removed output approximation character on non-logarithmic solutions for `N`.
+  *  Added flag `--prec` for command-line interface allowing the user to choose output precision, where applicable, in [0, 10] with default 10.
     

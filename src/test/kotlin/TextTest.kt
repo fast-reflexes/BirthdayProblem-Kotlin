@@ -30,14 +30,14 @@ class TextTest {
                     "1 -p 0.5 -a",
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of 1 items, needed to have at least a 50% chance of a non-unique sample is:",
-                        "          ≈1 (Taylor series approximation used in main calculation)"
+                        "          2 (Taylor series approximation used in main calculation)"
                     )
                 ),
                 Arguments.of(
                     "1000000000 -p 0.0000001",
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of 1000000000 (=10^9) items, needed to have at least a 0.00001% (=10^-7) chance of a non-unique sample is:",
-                        "          ≈14 (Taylor series approximation used in main calculation)"
+                        "          15 (Taylor series approximation used in main calculation)"
                     )
                 ),
                 Arguments.of(
@@ -74,7 +74,7 @@ class TextTest {
                     "366 -p 0.5",
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of 366 items, needed to have at least a 50% chance of a non-unique sample is:",
-                        "          ≈23 (Taylor series approximation used in main calculation)"
+                        "          23 (Taylor series approximation used in main calculation)"
                     )
                 ),
                 Arguments.of(
@@ -151,14 +151,14 @@ class TextTest {
                     "52 -p 0.1 -c",
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of ≈80529020383886612857810199580012764961409004334781435987268084328737 (≈8*10^67) items, needed to have at least a 10% chance of a non-unique sample is:",
-                        "          ≈4119363813276486714957808853108063 (≈4*10^33) (Taylor series approximation used in main calculation)"
+                        "          4119363813276486714957808853108064 (≈4*10^33) (Taylor series approximation used in main calculation)"
                     )
                 ),
                 Arguments.of(
                     "52 -p 0.5 -c",
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of ≈80529020383886612857810199580012764961409004334781435987268084328737 (≈8*10^67) items, needed to have at least a 50% chance of a non-unique sample is:",
-                        "          ≈10565837726592754214318243269428637 (≈10^34) (Taylor series approximation used in main calculation)"
+                        "          10565837726592754214318243269428637 (≈10^34) (Taylor series approximation used in main calculation)"
                     )
                 ),
                 Arguments.of(

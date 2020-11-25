@@ -732,20 +732,25 @@ class BirthdayProblem {
             }
 
             // results in a number with prec decimals (if prec is positive which it should be)
-            fun toOutputNumberFormatted(d: BigDecimal, prec: Int = OUTPUT_PRECISION): String =
-                toOutputNumber(d.setScale(prec, RoundingMode.HALF_UP).toPlainString())
+            fun toOutputNumberFormatted(d: BigDecimal, prec: Int? = null): String =
+                toOutputNumber(d.setScale(prec ?: OUTPUT_PRECISION, RoundingMode.HALF_UP).toPlainString())
 
-            fun toFloatRoundedAndApproximateParts(f: BigDecimal, prec: Int = OUTPUT_PRECISION): Pair<String, String> {
+            fun toFloatRoundedAndApproximateParts(f: BigDecimal, prec: Int? = null): Pair<String, String> {
                 val roundedF = toOutputNumberFormatted(f, prec)
                 val prefix = if(DecimalFns.areNotEqual(f, BigDecimal(roundedF, DecimalContext.ctx))) "≈" else ""
                 return prefix to roundedF
             }
 
-            fun toFloatRoundedAndApproximate(f: BigDecimal, prec: Int = OUTPUT_PRECISION): String =
+            fun toFloatRoundedAndApproximate(f: BigDecimal, prec: Int? = null): String =
                 toFloatRoundedAndApproximateParts(f, prec).toList().joinToString("")
 
+            fun toIntegralRounded(d: BigDecimal, rounding: RoundingMode = RoundingMode.HALF_UP): Pair<String, String> {
+                val roundedD = d.setScale(0, rounding).toBigInteger() // round correctly before going to BigInteger
+                return "" to roundedD.toString()
+            }
+
             fun toIntegralRoundedAndApproximateParts(d: BigDecimal): Pair<String, String> {
-                val roundedD = d.setScale(0, RoundingMode.HALF_UP).toBigInteger() // round correctly before ging to BigInteger
+                val roundedD = d.setScale(0, RoundingMode.HALF_UP).toBigInteger() // round correctly before going to BigInteger
                 val prefix = if(DecimalFns.areNotEqual(d, BigDecimal(roundedD, DecimalContext.ctx))) "≈" else ""
                 return prefix to roundedD.toString()
             }
@@ -809,14 +814,15 @@ class BirthdayProblem {
                 dLogOrNot: BigDecimal,
                 p: BigDecimal,
                 pPercent: BigDecimal,
-                isLog2: Boolean
+                isLog2: Boolean,
+                prec: Int? = null
             ): Pair<String, String> {
                 val (dLog2Text, dLog10Text, dTextPair) = isLog2.let {
                     if (it)
                         Triple(
                             "2^",
                             "",
-                            BirthdayProblemNumberFormatter.toFloatRoundedAndApproximateParts(dLogOrNot)
+                            BirthdayProblemNumberFormatter.toFloatRoundedAndApproximateParts(dLogOrNot, prec)
                         )
                     else
                         Triple(
@@ -836,25 +842,26 @@ class BirthdayProblem {
                 dLogOrNot: BigDecimal,
                 p: BigDecimal,
                 pPercent: BigDecimal,
-                isLog2: Boolean
+                isLog2: Boolean,
+                prec: Int? = null
             ): String {
-                val (dText, pText) = headerTextBirthdayProblemInvNumbers(dLogOrNot, p, pPercent, isLog2)
+                val (dText, pText) = headerTextBirthdayProblemInvNumbers(dLogOrNot, p, pPercent, isLog2, prec)
                 return "The number of samples, sampled uniformly at random from a set of $dText items, needed to have at least a $pText chance of a non-unique sample is:"
             }
 
-            fun resultTextBirthdayProblemInvNumbers(n: BigDecimal, isLog2: Boolean): String {
+            fun resultTextBirthdayProblemInvNumbers(n: BigDecimal, isLog2: Boolean, prec: Int? = null): String {
                 val (nLog2Text, nLog10Text, nTextPair) = isLog2.let {
                     if (it)
                         Triple(
                             "2^",
                             "",
-                            BirthdayProblemNumberFormatter.toFloatRoundedAndApproximateParts(n)
+                            BirthdayProblemNumberFormatter.toFloatRoundedAndApproximateParts(n, prec)
                         )
                     else
                         Triple(
                             "",
                             parenthesize(BirthdayProblemNumberFormatter.toLog10ReprOrNone(n)),
-                            BirthdayProblemNumberFormatter.toIntegralRoundedAndApproximateParts(n)
+                            BirthdayProblemNumberFormatter.toIntegralRounded(n, RoundingMode.CEILING)
                         )
                 }
                 val (prefix, nText) = nTextPair
@@ -864,23 +871,25 @@ class BirthdayProblem {
             fun resultTextBirthdayProblemInv(
                 n: BigDecimal,
                 isLog2: Boolean,
-                method: CalcPrecision
+                method: CalcPrecision,
+                prec: Int? = null
             ): String {
-                val nText = resultTextBirthdayProblemInvNumbers(n, isLog2)
+                val nText = resultTextBirthdayProblemInvNumbers(n, isLog2, prec)
                 return nText + parenthesize(methodToDescription(method, true))
             }
 
             fun headerTextBirthdayProblemNumbers(
                 dLogOrNot: BigDecimal,
                 nLogOrNot: BigDecimal,
-                isLog2: Boolean
+                isLog2: Boolean,
+                prec: Int? = null
             ): Pair<String, String> {
                 val (log2Text, log10TextPair, dTextPair) = isLog2.let {
                     if (it)
                         Triple(
                             "2^",
                             Pair("", ""),
-                            BirthdayProblemNumberFormatter.toFloatRoundedAndApproximateParts(dLogOrNot)
+                            BirthdayProblemNumberFormatter.toFloatRoundedAndApproximateParts(dLogOrNot, prec)
                         )
                     else
                         Triple(
@@ -897,18 +906,18 @@ class BirthdayProblem {
                 return (prefix + log2Text + dText + dLog10Text) to (log2Text + nLogOrNot.toPlainString() + nLog10Text)
             }
 
-            fun headerTextBirthdayProblem(dLogOrNot: BigDecimal, nLogOrNot: BigDecimal, isLog2: Boolean): String {
-                val (dText, nText) = headerTextBirthdayProblemNumbers(dLogOrNot, nLogOrNot, isLog2)
+            fun headerTextBirthdayProblem(dLogOrNot: BigDecimal, nLogOrNot: BigDecimal, isLog2: Boolean, prec: Int? = null): String {
+                val (dText, nText) = headerTextBirthdayProblemNumbers(dLogOrNot, nLogOrNot, isLog2, prec)
                 return "The probability of finding at least one non-unique sample among $nText samples, sampled uniformly at random from a set of $dText items, is:"
             }
 
-            fun resultTextBirthdayProblemNumbers(p: BigDecimal, pPercent: BigDecimal): Pair<String, String> {
+            fun resultTextBirthdayProblemNumbers(p: BigDecimal, pPercent: BigDecimal, prec: Int? = null): Pair<String, String> {
                 val pLog10Text = parenthesize(BirthdayProblemNumberFormatter.toLog10ReprOrNone(p))
-                return BirthdayProblemNumberFormatter.toFloatRoundedAndApproximate(pPercent) + "%" to pLog10Text
+                return BirthdayProblemNumberFormatter.toFloatRoundedAndApproximate(pPercent, prec) + "%" to pLog10Text
             }
 
-            fun resultTextBirthdayProblem(p: BigDecimal, pPercent: BigDecimal, method: CalcPrecision): Triple<String, String, String> {
-                val (pText, pLog10Text) = resultTextBirthdayProblemNumbers(p, pPercent)
+            fun resultTextBirthdayProblem(p: BigDecimal, pPercent: BigDecimal, method: CalcPrecision, prec: Int? = null): Triple<String, String, String> {
+                val (pText, pLog10Text) = resultTextBirthdayProblemNumbers(p, pPercent, prec)
                 return Triple(pText, pLog10Text, parenthesize(methodToDescription(method, false)))
             }
 
@@ -1144,6 +1153,13 @@ class BirthdayProblem {
                 "--json",
                 help = "Output results as a Json object"
             )
+            val prec by parser.storing(
+                "--prec",
+                help = "The number of digits (at most) to the right of the decimal point, where applicable, in the answer (a number between 0 and 10, default is 10)"
+            ) {
+                try { toInt() }
+                catch(nfe: NumberFormatException) { throw SystemExitException("Illegal input for prec: please provide an integer number in the range [0, 10]", 1) }
+            }.default(10)
 
         }
 
@@ -1215,10 +1231,10 @@ class BirthdayProblem {
                         throw SystemExitException("Illegal input for N: please provide a non-negative integer with digits only", 1)
                     else if(args.probability !== null && !"""(1\.[0]+|0\.[\d]+)""".toRegex().matches(args.probability!!))
                         throw SystemExitException("Illegal input for P: please provide a non-negative decimal number in the range [0.0, 1.0]", 1)
-                    //val oo = ArgParser(inputArgs, helpFormatter = DefaultHelpFormatter(prologue = description))
-                    //DefaultHelpFormatter(prologue = description).format("hej hej", 100, emptyList())
+                    else if(args.prec < 0 || args.prec > 10)
+                        throw SystemExitException("Illegal input for prec: please provide an integer number in the range [0, 10]", 1)
                 }
-                return BirthdayProblemInputParameters(args.d, args.samples, args.probability, args.binary, args.combinations, args.stirling, args.taylor, args.exact, args.all, args.json)
+                return BirthdayProblemInputParameters(args.d, args.samples, args.probability, args.binary, args.combinations, args.stirling, args.taylor, args.exact, args.all, args.json, args.prec)
             }
         }
 
@@ -1278,7 +1294,8 @@ class BirthdayProblem {
                     inputParams.isTaylor,
                     inputParams.isExact,
                     inputParams.isAll,
-                    inputParams.isJson
+                    inputParams.isJson,
+                    inputParams.prec
                 )
             }
 
@@ -1313,7 +1330,8 @@ class BirthdayProblem {
                             if (params.isBinary) params.dLog!! else params.d!!,
                             params.p,
                             params.pPercent!!,
-                            params.isBinary
+                            params.isBinary,
+                            params.prec
                         )
                     )
                     try {
@@ -1330,7 +1348,8 @@ class BirthdayProblem {
                                 BirthdayProblemTextFormatter.resultTextBirthdayProblemInv(
                                     n,
                                     params.isBinary,
-                                    methodUsed
+                                    methodUsed,
+                                    params.prec
                                 )
                             )
                         )
@@ -1344,7 +1363,8 @@ class BirthdayProblem {
                         BirthdayProblemTextFormatter.headerTextBirthdayProblem(
                             if (params.isBinary) params.dLog!! else params.d!!,
                             if (params.isBinary) params.nLog!! else params.n!!,
-                            params.isBinary
+                            params.isBinary,
+                            params.prec
                         )
                     )
                     var lastMethodUsed: CalcPrecision? = null
@@ -1378,7 +1398,8 @@ class BirthdayProblem {
                                         BirthdayProblemTextFormatter.resultTextBirthdayProblem(
                                             p,
                                             pPercent,
-                                            methodUsed
+                                            methodUsed,
+                                            params.prec
                                         )
                                     )
                                 }
@@ -1420,7 +1441,8 @@ class BirthdayProblem {
                         if (params.isBinary) params.dLog!! else params.d!!,
                         params.p,
                         params.pPercent!!,
-                        params.isBinary
+                        params.isBinary,
+                        params.prec
                     )
                     result.d = dText
                     result.p = pText
@@ -1433,7 +1455,7 @@ class BirthdayProblem {
                             params.p,
                             params.isBinary
                         )
-                        val nText = BirthdayProblemTextFormatter.resultTextBirthdayProblemInvNumbers(n, params.isBinary)
+                        val nText = BirthdayProblemTextFormatter.resultTextBirthdayProblemInvNumbers(n, params.isBinary, params.prec)
                         result.results[BirthdayProblemTextFormatter.methodToText(methodUsed).toLowerCase()] = nText
                     }
                     catch(e: Exception) {
@@ -1444,7 +1466,8 @@ class BirthdayProblem {
                     val (dText, nText) = BirthdayProblemTextFormatter.headerTextBirthdayProblemNumbers(
                         if (params.isBinary) params.dLog!! else params.d!!,
                         if (params.isBinary) params.nLog!! else params.n!!,
-                        params.isBinary
+                        params.isBinary,
+                        params.prec
                     )
                     result.d = dText
                     result.n = nText
@@ -1474,7 +1497,7 @@ class BirthdayProblem {
                                     )
                                 lastMethodUsed = methodUsed
                                 pPercent = DecimalFns.toPercent(p)
-                                val pText = BirthdayProblemTextFormatter.resultTextBirthdayProblemNumbers(p, pPercent).toList().joinToString("")
+                                val pText = BirthdayProblemTextFormatter.resultTextBirthdayProblemNumbers(p, pPercent, params.prec).toList().joinToString("")
                                 result.results[BirthdayProblemTextFormatter.methodToText(methodUsed).toLowerCase()] = pText
                             }
                             catch(e: Exception) {
@@ -1541,7 +1564,8 @@ class BirthdayProblem {
         val isTaylor: Boolean,
         val isExact: Boolean,
         val isAll: Boolean,
-        val isJson: Boolean
+        val isJson: Boolean,
+        val prec: Int
     )
 
     private data class BirthdayProblemParameters(
@@ -1556,7 +1580,8 @@ class BirthdayProblem {
         val isTaylor: Boolean,
         val isExact: Boolean,
         val isAll: Boolean,
-        val isJson: Boolean
+        val isJson: Boolean,
+        val prec: Int
     )
 
 }
