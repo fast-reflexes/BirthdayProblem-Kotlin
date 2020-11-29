@@ -65,7 +65,7 @@ the usage in Gradle:
 
 ### Command-line
 
-Command-line usage can be summarized by
+Command-line usage can be summarized with following input parameters:
 
     D [-n SAMPLES] [-p PROBABILITY] [-b] [-c] [-t] [-s] [-e] [-a] [-j] [--prec PREC]
     
