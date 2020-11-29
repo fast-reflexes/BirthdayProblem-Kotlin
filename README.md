@@ -148,12 +148,23 @@ or use the fat jar:
     > kotlinc -cp BirthdayProblem-1.0-fat.jar Program.kt // compile
     > kotlin -cp BirthdayProblem-1.0-fat.jar:. ProgramKt // run
     
-The functions to call has signatures
+The functions to call have signatures
 
     fun solveForP(dOrDLog: BigDecimal, nOrNLog: BigDecimal, isBinary: Boolean, isCombinations: Boolean, method: CalcPrecision): Pair<BigDecimal, CalcPrecision>
     fun solveForN(dOrDLog: BigDecimal, pIn: BigDecimal, isBinary: Boolean, isCombinations: Boolean): Pair<BigDecimal, CalcPrecision>
 
 and may throw exceptions.
+
+## Testing
+
+To run tests, simply execute the Gradle task
+
+    > ./gradlew test
+
+## Notes
+
+* This project is also available in Python at https://github.com/fast-reflexes/BirthdayProblem-Python
+* This project is available as an online solver at https://www.bdayprob.com
 
 ## Author
 
