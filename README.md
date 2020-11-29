@@ -27,17 +27,19 @@ whether they match well.
 
 ### Parameter legend
 
-Name | Type | Effect
---- | --- | ---
-`D` | integer | The size of the set to sample from
-`N` | integer | The number of samples sampled from `D`
-`P` | floating point number | The probability of a non-unique sample in `N`
-`binary` | boolean | Whether to interpret `D` and `N` as base-2 logarithms
-`combinations` | boolean | Whether to interpret `D` as the size of a set from which we must yield the actual size, `D!`, of the set to sample from  
-`exact` | boolean | Whether to calculate `P` with exact method
-`stirling` | boolean | Whether to calculate `P` with exact method using Stirling's approximation in calculation of faculties
-`taylor` | boolean | Whether to calculate `P` with Taylor approximation 
-`prec` | integer | Decimals in the solution where applicable (in [0, 10] with default 10)
+Name | Type | Effect | CLI flag
+--- | --- | --- | ---
+`D` | integer | The size of the set to sample from | -
+`N` | integer | The number of samples sampled from `D` | `-n`
+`P` | floating point number | The probability of a non-unique sample in `N` | `-p`
+`binary` | boolean | Whether to interpret `D` and `N` as base-2 logarithms | `-b`
+`combinations` | boolean | Whether to interpret `D` as the size of a set from which we must yield the actual size, `D!`, of the set to sample from | `-c`  
+`taylor` | boolean | Whether to calculate `P` with Taylor approximation | `-t`
+`stirling` | boolean | Whether to calculate `P` with exact method using Stirling's approximation in calculation of faculties | `-s`
+`exact` | boolean | Whether to calculate `P` with exact method | `-e`
+`all` | boolean | Whether to calculate `P` with all methods (implies `-s -t -e`) | `-a`
+`json` | boolean | Whether to output answer as a Json object or as text | `-j`
+`prec` | integer | Decimals in the solution where applicable (in [0, 10] with default 10) | `--prec`
     
 ## Dependencies
 
@@ -62,6 +64,12 @@ the usage in Gradle:
 * To run the standalone application with arguments, execute (for example) `./gradlew run --args="366 -n 23 -a"`
 
 ### Command-line
+
+Command-line usage can be summarized by
+
+    D [-n SAMPLES] [-p PROBABILITY] [-b] [-c] [-t] [-s] [-e] [-a] [-j] [--prec PREC]
+    
+The meaning of the flags can be found in the table further up.
 
 When using the project on the command-line, transitive dependencies need to be included manually.
 
@@ -147,15 +155,11 @@ The functions to call has signatures
 
 and may throw exceptions.
 
-## License
-
-This project is unlicensed but may be used in uncommercial projects without restrictions.
-
 ## Author
 
 Elias Lousseief (2020)
 
-##Change log
+## Change log
 
 * *v. 1.0*
 * *v. 1.1*
