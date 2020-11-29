@@ -69,7 +69,7 @@ Command-line usage can be summarized with following input parameters:
 
     D [-n SAMPLES] [-p PROBABILITY] [-b] [-c] [-t] [-s] [-e] [-a] [-j] [--prec PREC]
     
-The meaning of the flags can be found in the table further up.
+The meaning of the flags can be found in the table further up. An additional `--help` flag is also available to provide information.
 
 When using the project on the command-line, transitive dependencies need to be included manually.
 
