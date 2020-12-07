@@ -28,7 +28,7 @@ class BirthdayProblem {
                 ctx.precision > MAX_PRECISION
 
             fun adjustPrecision(integerPartSz: Int) {
-                ctx = MathContext(integerPartSz + 1 + DECIMAL_PRECISION)
+                ctx = MathContext((if(integerPartSz > 0) integerPartSz else 1) + DECIMAL_PRECISION)
             }
         }
 
@@ -45,6 +45,14 @@ class BirthdayProblem {
         ######################################################################################################################################################################################################*/
 
         companion object {
+
+            // basic constants
+            val ZERO: BigDecimal = BigDecimal("0")
+            val HALF: BigDecimal = BigDecimal("0.5")
+            val ONE: BigDecimal = BigDecimal("1")
+            val TWO: BigDecimal = BigDecimal("2")
+            val TEN: BigDecimal = BigDecimal("10")
+            val HUNDRED: BigDecimal = BigDecimal("100")
 
             // hard-coded constants with 100 / 1000 decimal precision
             val PI_100 = BigDecimal("3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679",
@@ -65,9 +73,9 @@ class BirthdayProblem {
             // e base and 2 base logarithms of 2 and PI for repeatedly used values and logarithm base conversions
             //val LOG_E_2 = BigDecimal("0.6931471805599453094172321214581765680755001343602552541206800094933936219696947156058633269964186875420014810205706857336855202357581305570326707516350759619307275708283714351903070386238916734711233501153644979552391204751726815749320651555247341395258829504530070953263666426541042391578149520437404303855008019441706416715186447128399681717845469570262716310645461502572074024816377733896385506952606683411372738737229289564935470257626520988596932019650585547647033067936544325476327449512504060694381471046899465062201677204245245296126879465461931651746813926725041038025462596568691441928716082938031727143677826548775664850856740776484514644399404614226031930967354025744460703080960850474866385231381816767514386674766478908814371419854942315199735488037516586127535291661000710535582498794147295092931138971559982056543928717000721808576102523688921324497138932037843935308877482597017155910708823683627589842589185353024363421436706118923678919237231467232172053401649256872747782344535347648114941864238677677440606956", DecimalContext.ctx)
             //val LOG_E_PI = BigDecimal("1.1447298858494001741434273513530587116472948129153115715136230714721377698848260797836232702754897077020098122286979891590482055279234565872790810788102868252763939142663459029024847733588699377892031196308247567940119160282172273798881265631780498236973133106950036000644054872638802232700964335049595118150662372524683433912698965797514047770385779953998258425660228485014813621791592525056707638686028076345688975051233436078143991414426429596712897781136526452345041059007160818570824981188183186897672845928110257656875172422338337189273043288217348651042761532375161028392221340143696717585616442473718780506046692056283377310133621627451589875201512996545465739691528252391695852453793594601400379956519666036538000112659858500129765699060744667455472671045084950668558743390774251341592412652317771784917799588095767880510296444750901508911403278080768337337938949488075152890091875363766086707435833345108139232535574067684327431198049633999761803046221286361595859836404758009861799938264629277646275948484896414107483132", DecimalContext.ctx)
-            val LOG_E_2: BigDecimal = BigDecimalMath.log(BigDecimal("2.0"), DecimalContext.ctx)
+            val LOG_E_2: BigDecimal = BigDecimalMath.log(TWO, DecimalContext.ctx)
             val LOG_E_PI: BigDecimal = BigDecimalMath.log(PI, DecimalContext.ctx)
-            val LOG_2_E: BigDecimal = BigDecimal.ONE.divide(LOG_E_2, DecimalContext.ctx)
+            val LOG_2_E: BigDecimal = ONE.divide(LOG_E_2, DecimalContext.ctx)
             val LOG_2_PI: BigDecimal = LOG_E_PI.divide(LOG_E_2, DecimalContext.ctx)
 
             fun isLessThan(a: BigDecimal, b: BigDecimal): Boolean =
@@ -86,25 +94,25 @@ class BirthdayProblem {
                 !areEqual(a, b)
 
             fun isZero(a: BigDecimal): Boolean =
-                areEqual(a, 0.toBigDecimal(DecimalContext.ctx))
+                areEqual(a, ZERO)
 
             fun isOne(a: BigDecimal): Boolean =
-                areEqual(a, 1.toBigDecimal(DecimalContext.ctx))
+                areEqual(a, ONE)
 
             fun isNotOne(a: BigDecimal): Boolean =
-                areNotEqual(a, 1.toBigDecimal(DecimalContext.ctx))
+                areNotEqual(a, ONE)
 
             fun isGreaterThanOne(a: BigDecimal): Boolean =
-                isGreaterThan(a, 1.toBigDecimal(DecimalContext.ctx))
+                isGreaterThan(a, ONE)
 
             fun isLessThanOne(a: BigDecimal): Boolean =
-                isLessThan(a, 1.toBigDecimal(DecimalContext.ctx))
+                isLessThan(a, ONE)
 
             fun isGreaterThanZero(a: BigDecimal): Boolean =
-                isGreaterThan(a, 0.toBigDecimal(DecimalContext.ctx))
+                isGreaterThan(a, ZERO)
 
             fun isLessThanZero(a: BigDecimal): Boolean =
-                isLessThan(a, 0.toBigDecimal(DecimalContext.ctx))
+                isLessThan(a, ZERO)
 
             fun isInteger(a: BigDecimal): Boolean =
                 try {
@@ -116,7 +124,7 @@ class BirthdayProblem {
                 }
 
             fun toPercent(p: BigDecimal): BigDecimal =
-                p.multiply(BigDecimal("100", DecimalContext.ctx), DecimalContext.ctx)
+                p.multiply(HUNDRED, DecimalContext.ctx)
 
             /**
              * facultyNTakeM calculates (n)_m = n! / (n - m)!. This can be done naively by calculating (n)_m directly or by first calculating n! and then dividing it by (n - m)!.
@@ -125,7 +133,7 @@ class BirthdayProblem {
 
             // input in natural numbers, output in natural logarithms. Not suitable for large m! n! can be calculated naively by using n = m
             fun facultyNTakeMNaive(n: BigDecimal, m: BigDecimal): BigDecimal {
-                var nTakeMFacLogE = 0.toBigDecimal(DecimalContext.ctx)
+                var nTakeMFacLogE = ZERO
                 var i = n.toBigInteger()
                 val stop = i.subtract(m.toBigInteger())
                 while (isGreaterThan(i, stop)) {
@@ -165,7 +173,7 @@ class BirthdayProblem {
             // faculty method wrapper for both natural and base-2 logarithms
             fun facultyLog(n: BigDecimal, nLog: BigDecimal, isLog2: Boolean): BigDecimal {
                 if (isZero(n)) // n == 0
-                    return 1.toBigDecimal(DecimalContext.ctx)
+                    return ONE
                 else {
                     if (isLog2)
                         return facultyStirlingLog2(n, nLog)
@@ -189,10 +197,10 @@ class BirthdayProblem {
             */
             // in e-log space
             fun facultyStirlingLogE(n: BigDecimal, nLogE: BigDecimal): BigDecimal {
-                val t1InnerSubtrNFacLogE = nLogE.subtract(1.toBigDecimal(DecimalContext.ctx), DecimalContext.ctx)
+                val t1InnerSubtrNFacLogE = nLogE.subtract(ONE, DecimalContext.ctx)
                 val t1NFacLogE = n.multiply(t1InnerSubtrNFacLogE, DecimalContext.ctx)
                 val t2NFacLogE =
-                    0.5.toBigDecimal(DecimalContext.ctx).multiply(
+                    HALF.multiply(
                         LOG_E_2.add(LOG_E_PI, DecimalContext.ctx).add(nLogE,
                             DecimalContext.ctx
                         ), DecimalContext.ctx
@@ -214,8 +222,8 @@ class BirthdayProblem {
             fun facultyStirlingLog2(n: BigDecimal, nLog2: BigDecimal): BigDecimal {
                 val t1InnerSubtrNFacLog2 = nLog2.subtract(LOG_2_E, DecimalContext.ctx)
                 val t1NFacLog2 = n.multiply(t1InnerSubtrNFacLog2, DecimalContext.ctx)
-                val t2NFacLog2 = 0.5.toBigDecimal(DecimalContext.ctx)
-                    .multiply(1.toBigDecimal(DecimalContext.ctx).add(LOG_2_PI, DecimalContext.ctx).add(nLog2,
+                val t2NFacLog2 = HALF
+                    .multiply(ONE.add(LOG_2_PI, DecimalContext.ctx).add(nLog2,
                         DecimalContext.ctx
                     ), DecimalContext.ctx
                     )
@@ -336,10 +344,10 @@ class BirthdayProblem {
                         DecimalFns.LOG_E_2
                     )))
                     // trivially, if you sample less than 2 times, the chance of a non-unique sample is 0%
-                    return Pair(0.toBigDecimal(DecimalContext.ctx), CalcPrecision.TRIVIAL)
+                    return Pair(DecimalFns.ZERO, CalcPrecision.TRIVIAL)
                 else if (DecimalFns.isGreaterThan(nLog, dLog))
                     // trivially, if you sample more times than the number of items in the set to sample from, the chance of a non-unique item is 100%
-                    return Pair(1.toBigDecimal(DecimalContext.ctx), CalcPrecision.TRIVIAL)
+                    return Pair(DecimalFns.ONE, CalcPrecision.TRIVIAL)
                 else {
 
                     if (listOf(
@@ -355,7 +363,7 @@ class BirthdayProblem {
                         } method.")
 
                     // carry out the calculations
-                    DecimalContext.adjustPrecision((maybeD ?: dLog).run { precision() - scale() }.coerceAtLeast(1))
+                    DecimalContext.adjustPrecision((maybeD ?: dLog).run { precision() - scale() })
                     if (calcPrecision == CalcPrecision.EXACT) {
                         if (DecimalContext.isTooPrecise())
                             // with a too high precision, even the simplest calculation takes too long
@@ -373,7 +381,7 @@ class BirthdayProblem {
                             return Pair(birthdayProblemExact(maybeD!!, dLog, maybeN!!), CalcPrecision.EXACT)
                     } else if (calcPrecision == CalcPrecision.TAYLOR_APPROX) {
                         if (DecimalContext.isTooPrecise()) {
-                            DecimalContext.adjustPrecision(dLog.run { precision() - scale() }.coerceAtLeast(1))
+                            DecimalContext.adjustPrecision(dLog.run { precision() - scale() })
                             if (DecimalContext.isTooPrecise())
                                 // with a too high precision, even the simplest calculation takes too long
                                 throw Exception("necessary precision is too high for ${
@@ -417,7 +425,7 @@ class BirthdayProblem {
                 if (DecimalFns.isZero(p))
                     // trivially, to have a 0% chance of picking a duplicate, just pick one sample (or 0)
                     return Pair(
-                        if (dIsLog2) 0.toBigDecimal(DecimalContext.ctx) else 1.toBigDecimal(DecimalContext.ctx),
+                        if (dIsLog2) DecimalFns.ZERO else DecimalFns.ONE,
                         CalcPrecision.TRIVIAL
                     )
                 else if (DecimalFns.isOne(p) || DecimalFns.isGreaterThanOne(p)) {
@@ -427,7 +435,7 @@ class BirthdayProblem {
                         return Pair(
                             maybeD
                                 ?.let {
-                                    BigDecimalMath.log(it.add(1.toBigDecimal(DecimalContext.ctx), DecimalContext.ctx),
+                                    BigDecimalMath.log(it.add(DecimalFns.ONE, DecimalContext.ctx),
                                         DecimalContext.ctx
                                     ).divide(DecimalFns.LOG_E_2, DecimalContext.ctx)
                                 }
@@ -435,12 +443,12 @@ class BirthdayProblem {
                             CalcPrecision.TRIVIAL)
                     else
                         // if d is too large to calculate adding 1 to it is negligible
-                        return Pair(maybeD?.add(1.toBigDecimal(DecimalContext.ctx), DecimalContext.ctx) ?: dLog,
+                        return Pair(maybeD?.add(DecimalFns.ONE, DecimalContext.ctx) ?: dLog,
                             CalcPrecision.TRIVIAL
                         )
                 } else {
                     // carry out the calculations
-                    DecimalContext.adjustPrecision(dLog.run { precision() - scale() }.coerceAtLeast(1))
+                    DecimalContext.adjustPrecision(dLog.run { precision() - scale() })
                     if (DecimalContext.isTooPrecise())
                         // with a too high precision, even the simplest calculation takes too long
                         throw Exception("necessary precision is too high for Taylor method, can't continue")
@@ -485,7 +493,7 @@ class BirthdayProblem {
                 val possibleLogE = dLogE.multiply(n, DecimalContext.ctx)
                 val negProbLogE = favourableLogE.subtract(possibleLogE, DecimalContext.ctx)
                 val negProb = BigDecimalMath.exp(negProbLogE, DecimalContext.ctx)
-                val prob = 1.toBigDecimal(DecimalContext.ctx).subtract(negProb, DecimalContext.ctx) // complement
+                val prob = DecimalFns.ONE.subtract(negProb, DecimalContext.ctx) // complement
                 return prob
             }
 
@@ -497,9 +505,9 @@ class BirthdayProblem {
                 val negProbLog2 =
                     favourableLog2.subtract(possibleLog2, DecimalContext.ctx) // division in log space is subtraction
                 val negProb =
-                    BigDecimalMath.pow(2.toBigDecimal(DecimalContext.ctx), negProbLog2, DecimalContext.ctx) // go back to non-logarithmic space
-                val prob = 1.toBigDecimal(DecimalContext.ctx).subtract(negProb, DecimalContext.ctx) // complement
-                return prob
+                    BigDecimalMath.pow(DecimalFns.TWO, negProbLog2, DecimalContext.ctx) // go back to non-logarithmic space
+                val prob = DecimalFns.ONE.subtract(negProb, DecimalContext.ctx) // complement
+                return prob.coerceAtLeast(DecimalFns.ZERO) // fix precision errors leading to negative result
             }
 
             // calculates the result in natural base logarithms.
@@ -509,8 +517,8 @@ class BirthdayProblem {
                 val negProbLogE =
                     favourableLogE.subtract(possibleLogE, DecimalContext.ctx) // division in log space is subtraction
                 val negProb = BigDecimalMath.exp(negProbLogE, DecimalContext.ctx) // back to non-logarithmic space
-                val prob = 1.toBigDecimal(DecimalContext.ctx).subtract(negProb, DecimalContext.ctx)
-                return prob
+                val prob = DecimalFns.ONE.subtract(negProb, DecimalContext.ctx)
+                return prob.coerceAtLeast(DecimalFns.ZERO) // fix precision errors leading to negative result
             }
 
             /**
@@ -551,8 +559,8 @@ class BirthdayProblem {
 
             // calculates result in base-2 logarithms (second level of logs)
             fun birthdayProblemTaylorApproxLog2(dLog2: BigDecimal, nLog2: BigDecimal): BigDecimal {
-                val t1NegProbMinusLogELog2 = nLog2.multiply(2.toBigDecimal(DecimalContext.ctx), DecimalContext.ctx)
-                val t2NegProbMinusLogELog2 = dLog2.add(1.toBigDecimal(DecimalContext.ctx), DecimalContext.ctx)
+                val t1NegProbMinusLogELog2 = nLog2.multiply(DecimalFns.TWO, DecimalContext.ctx)
+                val t2NegProbMinusLogELog2 = dLog2.add(DecimalFns.ONE, DecimalContext.ctx)
                 val negProbMinusLogELog2 =
                     t1NegProbMinusLogELog2.subtract(
                         t2NegProbMinusLogELog2,
@@ -560,13 +568,13 @@ class BirthdayProblem {
                     )
                 val negProbMinusLogE =
                     BigDecimalMath.pow(
-                        2.toBigDecimal(DecimalContext.ctx),
+                        DecimalFns.TWO,
                         negProbMinusLogELog2,
                         DecimalContext.ctx
                     ) // go back to non-logarithmic space
                 val negProbLogE = negProbMinusLogE.negate()
                 val negProb = BigDecimalMath.exp(negProbLogE, DecimalContext.ctx)
-                val prob = 1.toBigDecimal(DecimalContext.ctx).subtract(negProb, DecimalContext.ctx) // complement
+                val prob = DecimalFns.ONE.subtract(negProb, DecimalContext.ctx) // complement
                 return prob
             }
 
@@ -579,7 +587,7 @@ class BirthdayProblem {
 
             // calculates result in natural logarithmic space
             fun birthdayProblemTaylorApproxLogE(dLogE: BigDecimal, nLogE: BigDecimal): BigDecimal {
-                val t1NegProbMinusLogELogE = nLogE.multiply(2.toBigDecimal(DecimalContext.ctx), DecimalContext.ctx)
+                val t1NegProbMinusLogELogE = nLogE.multiply(DecimalFns.TWO, DecimalContext.ctx)
                 val t2NegProbMinusLogELogE = dLogE.add(DecimalFns.LOG_E_2, DecimalContext.ctx)
                 val negProbMinusLogELogE =
                     t1NegProbMinusLogELogE.subtract(
@@ -589,7 +597,7 @@ class BirthdayProblem {
                 val negProbMinusLogE = BigDecimalMath.exp(negProbMinusLogELogE, DecimalContext.ctx) // go back to non-logarithmic space
                 val negProbLogE = negProbMinusLogE.negate()
                 val negProb = BigDecimalMath.exp(negProbLogE, DecimalContext.ctx)
-                val prob = 1.toBigDecimal(DecimalContext.ctx).subtract(negProb, DecimalContext.ctx) // complement
+                val prob = DecimalFns.ONE.subtract(negProb, DecimalContext.ctx) // complement
                 return prob
             }
 
@@ -637,13 +645,13 @@ class BirthdayProblem {
 
             // with base e logarithms
             fun birthdayProblemInvTaylorApproxLogE(dLogE: BigDecimal, p: BigDecimal): BigDecimal {
-                val t1SamplesLogE2 = BigDecimalMath.log(1.toBigDecimal(DecimalContext.ctx).subtract(p,
+                val t1SamplesLogE2 = BigDecimalMath.log(DecimalFns.ONE.subtract(p,
                     DecimalContext.ctx
                 ), DecimalContext.ctx
                 )
                 val t1SamplesLogE = BigDecimalMath.log(t1SamplesLogE2.negate(), DecimalContext.ctx)
                 val samplesLogE =
-                    0.5.toBigDecimal(DecimalContext.ctx)
+                    DecimalFns.HALF
                         .multiply(t1SamplesLogE.add(
                             DecimalFns.LOG_E_2.add(dLogE, DecimalContext.ctx),
                             DecimalContext.ctx
@@ -720,7 +728,7 @@ class BirthdayProblem {
                         exp += roundExp
                         d = d.add(ERR, DecimalContext.ctx) // add error constant to get around rounding errors due to floating point arithmetic (for example, 2.5 being stored as 2.49999999)
                         d = d.setScale(0, RoundingMode.HALF_UP)
-                        if(DecimalFns.isLessThan(d, 10.0.toBigDecimal(DecimalContext.ctx))) {
+                        if(DecimalFns.isLessThan(d, DecimalFns.TEN)) {
                             // d is less than 10, we have a nice base 10 representation
                             val equalOrApprox = if(isExpReprEqualToStandardRepr(d, exp, inputD)) "=" else "≈"
                             return equalOrApprox + (if(DecimalFns.isNotOne(d)) (d.toPlainString() + "*") else "") + "10^" + exp
@@ -1042,11 +1050,11 @@ class BirthdayProblem {
                         // d is the size of a set of items, calculate the number of permutations that is possible with it
                         if (isBinary) {
                             dLog = DecimalFns.facultyLog(
-                                BigDecimalMath.pow(2.toBigDecimal(DecimalContext.ctx), dOrDLog, DecimalContext.ctx),
+                                BigDecimalMath.pow(DecimalFns.TWO, dOrDLog, DecimalContext.ctx),
                                 dOrDLog,
                                 true
                             )
-                            d = BigDecimalMath.pow(2.toBigDecimal(DecimalContext.ctx), dLog, DecimalContext.ctx)
+                            d = BigDecimalMath.pow(DecimalFns.TWO, dLog, DecimalContext.ctx)
                         } else {
                             dLog =
                                 DecimalFns.facultyLog(dOrDLog, BigDecimalMath.log(dOrDLog, DecimalContext.ctx), false)
@@ -1056,7 +1064,7 @@ class BirthdayProblem {
                         // d is already the size of the set of combinations
                         if (isBinary) {
                             dLog = dOrDLog
-                            d = BigDecimalMath.pow(2.toBigDecimal(DecimalContext.ctx), dOrDLog, DecimalContext.ctx)
+                            d = BigDecimalMath.pow(DecimalFns.TWO, dOrDLog, DecimalContext.ctx)
                         }
                         else
                             dLog = BigDecimalMath.log(dOrDLog, DecimalContext.ctx)
@@ -1071,12 +1079,12 @@ class BirthdayProblem {
                     try {
                         if (isBinary) {
                             nLog = nOrNLog
-                            n = BigDecimalMath.pow(2.toBigDecimal(DecimalContext.ctx), nLog, DecimalContext.ctx)
+                            n = BigDecimalMath.pow(DecimalFns.TWO, nLog, DecimalContext.ctx)
                         } else
                             // for all purposes, sampling 0 times is the same as samping 1 times
                             nLog = if(DecimalFns.isGreaterThanZero(nOrNLog!!)) BigDecimalMath.log(nOrNLog,
                                 DecimalContext.ctx
-                            ) else 0.toBigDecimal(DecimalContext.ctx)
+                            ) else DecimalFns.ZERO
                     } catch (e: Exception) {
                         n = null // calc of n threw which means n should be None
                     }
@@ -1302,6 +1310,10 @@ class BirthdayProblem {
             fun solve(args: Array<String>, isCLI: Boolean): String {
                 try {
                     val params = setup(args)
+
+                    if(params.dLog === null || params.dLog.scale() < 0) // implies the precision was not enough to store the size of this number, a scale had to be used
+                        throw Exception("couldn't setup calculations because input numbers were too large: the log of the resulting input set size D must not exceed 1000 digits.")
+
                     if(params.isJson)
                         return solveJson(params, isCLI)
                     else
@@ -1309,7 +1321,7 @@ class BirthdayProblem {
                 }
                 catch(e: Exception) {
                     if(isCLI) {
-                        println(e)
+                        println("Failed due to: ${e}")
                         println("program terminated abnormally with exit code 1")
                         exitProcess(1)
                     }

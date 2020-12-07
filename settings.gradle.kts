@@ -1,2 +1,2 @@
-rootProject.name = "BirthdayProblem"
+rootProject.name = "BirthdayProblem-Kotlin"
 
