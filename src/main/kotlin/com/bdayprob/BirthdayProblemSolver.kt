@@ -12,6 +12,36 @@ import kotlin.system.exitProcess
 
 class BirthdayProblem {
 
+    class SolverException(
+        val code: SolverErrorCode,
+        val method: CalcPrecision? = null,
+        message: String = "(no message available)"): RuntimeException(message) {
+
+        override fun toString(): String {
+            val methodText = if(method !== null) BirthdayProblemTextFormatter.methodToText(method) else "(method not available)"
+            val messages = mapOf(
+                SolverErrorCode.D_NOT_CALCULATED to "d exceeds maximum size and is needed to initialize calculations",
+                SolverErrorCode.DLOG_NOT_CALCULATED to "dLog exceeds maximum size and is needed to initialize calculations",
+                SolverErrorCode.D_NEEDED_FOR_METHOD to "d exceeds maximum size and is needed for method",
+                SolverErrorCode.DLOG_NEEDED_FOR_METHOD to "dLog exceeds maximum size and is needed for method",
+                SolverErrorCode.TOO_HIGH_PRECISION to "needed precision for method exceeds maximum precision",
+                SolverErrorCode.BAD_INPUT to "bad input: "+ message
+            )
+            return messages.getOrDefault(code, "an unknown error was encountered for the " + methodText + " method with code " + code)
+        }
+
+    }
+
+    enum class SolverErrorCode {
+        UNKNOWN_ERROR,
+        BAD_INPUT,
+        DLOG_NOT_CALCULATED,
+        D_NOT_CALCULATED,
+        D_NEEDED_FOR_METHOD,
+        DLOG_NEEDED_FOR_METHOD,
+        TOO_HIGH_PRECISION
+    }
+
     private class DecimalContext {
 
         companion object {
@@ -282,13 +312,9 @@ class BirthdayProblem {
                 )
                 val (d, dLog) = dPair
                 val (n, nLog) = nPair
-                if(dLog === null || nLog === null)
-                    throw Exception("dLog or nLog was not successfully calculated and are both needed for ${
-                        BirthdayProblemTextFormatter.methodToText(
-                            method
-                        )
-                    } method.")
-                return BirthdayProblemSolverChecked.birthdayProblem(d, dLog, n, nLog, method, isBinary)
+                if(dLog === null)
+                    throw SolverException(SolverErrorCode.DLOG_NOT_CALCULATED)
+                return BirthdayProblemSolverChecked.birthdayProblem(d, dLog, n, nLog!!, method, isBinary)
             }
 
             /**
@@ -312,7 +338,7 @@ class BirthdayProblem {
                 val (dPair, _, p) = BirthdayProblemInputHandler.setup(dOrDLog, null, pIn, isBinary, isCombinations)
                 val (d, dLog) = dPair
                 if(dLog === null)
-                    throw Exception("dLog was not successfully calculated and is needed for Taylor method.")
+                    throw SolverException(SolverErrorCode.DLOG_NOT_CALCULATED)
                 return BirthdayProblemSolverChecked.birthdayProblemInv(d, dLog, p!!, isBinary)
             }
 
@@ -356,22 +382,14 @@ class BirthdayProblem {
                         ).contains(calcPrecision) && (maybeD === null || maybeN === null)
                     )
                         // d and n are needed for these methods
-                        throw Exception("d or n was not successfully calculated and are both needed for ${
-                            BirthdayProblemTextFormatter.methodToText(
-                                calcPrecision
-                            )
-                        } method.")
+                        throw SolverException(SolverErrorCode.D_NEEDED_FOR_METHOD, calcPrecision)
 
                     // carry out the calculations
                     DecimalContext.adjustPrecision((maybeD ?: dLog).run { precision() - scale() })
                     if (calcPrecision == CalcPrecision.EXACT) {
                         if (DecimalContext.isTooPrecise())
                             // with a too high precision, even the simplest calculation takes too long
-                            throw  Exception("necessary precision is too high for ${
-                                BirthdayProblemTextFormatter.methodToText(
-                                    calcPrecision
-                                )
-                            } method, can't continue")
+                            throw SolverException(SolverErrorCode.TOO_HIGH_PRECISION, calcPrecision)
                         if (dIsLog2)
                             return Pair(
                                 birthdayProblemExact(maybeD!!, dLog.divide(DecimalFns.LOG_2_E, DecimalContext.ctx), maybeN!!),
@@ -384,11 +402,7 @@ class BirthdayProblem {
                             DecimalContext.adjustPrecision(dLog.run { precision() - scale() })
                             if (DecimalContext.isTooPrecise())
                                 // with a too high precision, even the simplest calculation takes too long
-                                throw Exception("necessary precision is too high for ${
-                                    BirthdayProblemTextFormatter.methodToText(
-                                        calcPrecision
-                                    )
-                                } method, can't continue")
+                                throw SolverException(SolverErrorCode.TOO_HIGH_PRECISION, calcPrecision)
                         }
                         if (dIsLog2)
                             return Pair(birthdayProblemTaylorApproxLog2(dLog, nLog), CalcPrecision.TAYLOR_APPROX)
@@ -397,11 +411,7 @@ class BirthdayProblem {
                     } else {
                         if (DecimalContext.isTooPrecise())
                             // with a too high precision, even the simplest calculation takes too long
-                            throw Exception("necessary precision is too high for ${
-                                BirthdayProblemTextFormatter.methodToText(
-                                    calcPrecision
-                                )
-                            } method, can't continue")
+                            throw SolverException(SolverErrorCode.TOO_HIGH_PRECISION, calcPrecision)
                         if (dIsLog2)
                             return Pair(
                                 birthdayProblemStirlingApproxLog2(maybeD!!, dLog, maybeN!!),
@@ -448,10 +458,13 @@ class BirthdayProblem {
                         )
                 } else {
                     // carry out the calculations
-                    DecimalContext.adjustPrecision(dLog.run { precision() - scale() })
-                    if (DecimalContext.isTooPrecise())
-                        // with a too high precision, even the simplest calculation takes too long
-                        throw Exception("necessary precision is too high for Taylor method, can't continue")
+                    DecimalContext.adjustPrecision((maybeD ?: dLog).run { precision() - scale() })
+                    if (DecimalContext.isTooPrecise()) {
+                        DecimalContext.adjustPrecision(dLog.run { precision() - scale() })
+                        if (DecimalContext.isTooPrecise())
+                            // with a too high precision, even the simplest calculation takes too long
+                            throw SolverException(SolverErrorCode.TOO_HIGH_PRECISION, CalcPrecision.TAYLOR_APPROX)
+                    }
                     if (dIsLog2)
                         return Pair(birthdayProblemInvTaylorApproxLog2(dLog, p), CalcPrecision.TAYLOR_APPROX)
                     else
@@ -808,6 +821,7 @@ class BirthdayProblem {
                     CalcPrecision.TAYLOR_APPROX -> "Taylor"
                     CalcPrecision.STIRLING_APPROX -> "Stirling"
                     CalcPrecision.TRIVIAL -> "Trivial"
+                    else -> "Unknown"
                 }
 
             fun methodToDescription(method: CalcPrecision, isInv: Boolean) =
@@ -816,6 +830,7 @@ class BirthdayProblem {
                     CalcPrecision.TAYLOR_APPROX -> "Taylor series approximation used in main calculation${if (isInv) "" else " (removes need for factorial calculation)"}"
                     CalcPrecision.STIRLING_APPROX -> "Stirling's approximation used in factorial calculation"
                     CalcPrecision.TRIVIAL -> "Trivial solution"
+                    else -> "Unknown method"
                 }
 
             fun headerTextBirthdayProblemInvNumbers(
