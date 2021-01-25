@@ -15,31 +15,33 @@ class BirthdayProblem {
     class SolverException(
         val code: SolverErrorCode,
         val method: CalcPrecision? = null,
-        message: String = "(no message available)"): RuntimeException(message) {
+        val inputMessage: String = "(no message available)"): RuntimeException() {
 
-        override fun toString(): String {
-            val methodText = if(method !== null) BirthdayProblemTextFormatter.methodToText(method) else "(method not available)"
-            val messages = mapOf(
-                SolverErrorCode.D_NOT_CALCULATED to "d exceeds maximum size and is needed to initialize calculations",
-                SolverErrorCode.DLOG_NOT_CALCULATED to "dLog exceeds maximum size and is needed to initialize calculations",
-                SolverErrorCode.D_NEEDED_FOR_METHOD to "d exceeds maximum size and is needed for method",
-                SolverErrorCode.DLOG_NEEDED_FOR_METHOD to "dLog exceeds maximum size and is needed for method",
-                SolverErrorCode.TOO_HIGH_PRECISION to "needed precision for method exceeds maximum precision",
-                SolverErrorCode.BAD_INPUT to "bad input: "+ message
-            )
-            return messages.getOrDefault(code, "an unknown error was encountered for the " + methodText + " method with code " + code)
-        }
+
+        override val message = inputMessage
+            get(): String {
+                val methodText = if(method !== null) BirthdayProblemTextFormatter.methodToText(method) else "(method not available)"
+                val messages = mapOf(
+                    SolverErrorCode.D_NOT_CALCULATED to "d exceeds maximum size and is needed to initialize calculations",
+                    SolverErrorCode.DLOG_NOT_CALCULATED to "dLog exceeds maximum size and is needed to initialize calculations",
+                    SolverErrorCode.D_NEEDED_FOR_METHOD to "d exceeds maximum size and is needed for method",
+                    SolverErrorCode.DLOG_NEEDED_FOR_METHOD to "dLog exceeds maximum size and is needed for method",
+                    SolverErrorCode.TOO_HIGH_PRECISION to "needed precision for method exceeds maximum precision",
+                    SolverErrorCode.BAD_INPUT to "bad input: "+ field
+                )
+                return messages.getOrDefault(code, "an unknown error was encountered for the " + methodText + " method with code " + code)
+            }
 
     }
 
-    enum class SolverErrorCode {
-        UNKNOWN_ERROR,
-        BAD_INPUT,
-        DLOG_NOT_CALCULATED,
-        D_NOT_CALCULATED,
-        D_NEEDED_FOR_METHOD,
-        DLOG_NEEDED_FOR_METHOD,
-        TOO_HIGH_PRECISION
+    enum class SolverErrorCode(val exitCode: Int) {
+        UNKNOWN_ERROR(1),
+        BAD_INPUT(2),
+        DLOG_NOT_CALCULATED(3),
+        D_NOT_CALCULATED(4),
+        D_NEEDED_FOR_METHOD(5),
+        DLOG_NEEDED_FOR_METHOD(6),
+        TOO_HIGH_PRECISION(7)
     }
 
     private class DecimalContext {
@@ -724,29 +726,17 @@ class BirthdayProblem {
 
             // returns log10 representation of a number or the empty string if the input is not outside the defined log10 representation thresholds.
             fun toLog10ReprOrNone(argD: BigDecimal): String {
-                var d = argD
-                val inputD = argD
-                var exp = 0 // powers of 10 filtered out of d
-                if((DecimalFns.isGreaterThan(LOG10_LOWER_THRESHOLD, d) || DecimalFns.isLessThan(
+                if((DecimalFns.isGreaterThan(LOG10_LOWER_THRESHOLD, argD) || DecimalFns.isLessThan(
                         LOG10_UPPER_THRESHOLD,
-                        d
-                    )) && DecimalFns.isGreaterThanZero(d)
+                        argD
+                    )) && DecimalFns.isGreaterThanZero(argD)
                 ) {
                     // d is smaller than the lower log 10 repr threshold or larger than the upper log 10 repr threshold, and not 0, so a complementary log 10 representation is called for
-                    while(true) {
-                        // loop here due to floating point arithmetic
-                        // example: d can, after filtering out powers of 10, be 9.9999 which rounds to 10 in which case we can filter out another power of 10 before proceeding
-                        val roundExp = d.run { (precision() - scale()) - 1 } // current powers of 10 filtered out
-                        d = d.scaleByPowerOfTen(-roundExp)
-                        exp += roundExp
-                        d = d.add(ERR, DecimalContext.ctx) // add error constant to get around rounding errors due to floating point arithmetic (for example, 2.5 being stored as 2.49999999)
-                        d = d.setScale(0, RoundingMode.HALF_UP)
-                        if(DecimalFns.isLessThan(d, DecimalFns.TEN)) {
-                            // d is less than 10, we have a nice base 10 representation
-                            val equalOrApprox = if(isExpReprEqualToStandardRepr(d, exp, inputD)) "=" else "≈"
-                            return equalOrApprox + (if(DecimalFns.isNotOne(d)) (d.toPlainString() + "*") else "") + "10^" + exp
-                        }
-                    }
+                    val roundedD = argD.round(MathContext(1))
+                    val d = roundedD.unscaledValue().toBigDecimal()
+                    val exp = -roundedD.scale()
+                    val equalOrApprox = if(isExpReprEqualToStandardRepr(d, exp, argD)) "=" else "≈"
+                    return equalOrApprox + (if(DecimalFns.isNotOne(d)) (d.toPlainString() + "*") else "") + "10^" + exp
                 }
                 else
                     return ""
@@ -812,7 +802,7 @@ class BirthdayProblem {
                     CalcPrecision.EXACT -> "Exact method"
                     CalcPrecision.TAYLOR_APPROX -> "Taylor approximation"
                     CalcPrecision.STIRLING_APPROX -> "Exact method with Stirling's approximation"
-                    else -> "Unknown method"
+                    CalcPrecision.TRIVIAL -> "Trivial method"
                 }
 
             fun methodToText(method: CalcPrecision) =
@@ -821,7 +811,6 @@ class BirthdayProblem {
                     CalcPrecision.TAYLOR_APPROX -> "Taylor"
                     CalcPrecision.STIRLING_APPROX -> "Stirling"
                     CalcPrecision.TRIVIAL -> "Trivial"
-                    else -> "Unknown"
                 }
 
             fun methodToDescription(method: CalcPrecision, isInv: Boolean) =
@@ -830,7 +819,6 @@ class BirthdayProblem {
                     CalcPrecision.TAYLOR_APPROX -> "Taylor series approximation used in main calculation${if (isInv) "" else " (removes need for factorial calculation)"}"
                     CalcPrecision.STIRLING_APPROX -> "Stirling's approximation used in factorial calculation"
                     CalcPrecision.TRIVIAL -> "Trivial solution"
-                    else -> "Unknown method"
                 }
 
             fun headerTextBirthdayProblemInvNumbers(
@@ -967,13 +955,13 @@ class BirthdayProblem {
 
             fun checkDecimal(variable: Any, varName: String): BigDecimal {
                 if(variable !is BigDecimal)
-                    throw Exception("${illegalInputString(varName)}: must be of type 'BigDecimal'")
+                    throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString(varName)}: must be of type 'BigDecimal'")
                 return variable
             }
 
             fun checkBoolean(variable: Any, varName: String): Boolean {
                 if(variable !is Boolean)
-                    throw Exception("${illegalInputString(varName)}: must be of type 'Boolean'")
+                    throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString(varName)}: must be of type 'Boolean'")
                 return variable
             }
 
@@ -991,7 +979,7 @@ class BirthdayProblem {
                 varMap: Map<String, String> = emptyMap()
             ) {
                 if(dOrDLog === null)
-                    throw Exception(illegalInputString(varMap.getOrDefault("dOrDLog", "dOrDLog")) + ": please provide a size for the set to sample from.")
+                    throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = illegalInputString(varMap.getOrDefault("dOrDLog", "dOrDLog")) + ": please provide a size for the set to sample from.")
                 checkDecimal(dOrDLog, varMap.getOrDefault("dOrDLog", "dOrDLog"))
                 dOrDLog as BigDecimal
 
@@ -1014,34 +1002,34 @@ class BirthdayProblem {
                 isAll as Boolean
 
                 if(!DecimalFns.isInteger(dOrDLog))
-                    throw Exception(illegalInputString(varMap.getOrDefault("dOrDLog", "dOrDLog")) + ": please provide an integer")
+                    throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = illegalInputString(varMap.getOrDefault("dOrDLog", "dOrDLog")) + ": please provide an integer")
                 else if(DecimalFns.isLessThanZero(dOrDLog))
-                    throw Exception(illegalInputString(varMap.getOrDefault("dOrDLog", "dOrDLog")) + ": please provide a non-negative integer")
+                    throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = illegalInputString(varMap.getOrDefault("dOrDLog", "dOrDLog")) + ": please provide a non-negative integer")
                 else if(DecimalFns.isZero(dOrDLog) && !isBinary && !isCombinations)
-                    throw Exception("${illegalInputString(varMap.getOrDefault("dOrDLog", "dOrDLog"))}: please provide a value for '${varMap.getOrDefault("dOrDLog", "dOrDLog")}' that results in a non-empty set of unique items from which samples are taken.")
+                    throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString(varMap.getOrDefault("dOrDLog", "dOrDLog"))}: please provide a value for '${varMap.getOrDefault("dOrDLog", "dOrDLog")}' that results in a non-empty set of unique items from which samples are taken.")
 
                 if((p === null && nOrNLog === null) || (p !== null && nOrNLog !== null))
-                    throw Exception("${illegalInputString()}: please provide a non-None value for either '${varMap.getOrDefault("nOrDLog", "nOrDLog")}' or '${varMap.getOrDefault("p", "p")}' (not both)")
+                    throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString()}: please provide a non-None value for either '${varMap.getOrDefault("nOrDLog", "nOrDLog")}' or '${varMap.getOrDefault("p", "p")}' (not both)")
 
                 if(nOrNLog !== null) {
                     checkDecimal(nOrNLog, varMap.getOrDefault("nOrDLog", "nOrDLog"))
                     nOrNLog as BigDecimal
                     if(!isStirling && !isExact && !isTaylor && !isAll)
-                        throw Exception("${illegalInputString()}: must set at least one of '${varMap.getOrDefault("isStirling", "isStirling")}', '${varMap.getOrDefault("isTaylor", "isTaylor")}', '${varMap.getOrDefault("isExact", "isExact")}' or '${varMap.getOrDefault("isAll", "isAll")}' when '${varMap.getOrDefault("nOrNLog", "nOrNLog")}' is not None.")
+                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString()}: must set at least one of '${varMap.getOrDefault("isStirling", "isStirling")}', '${varMap.getOrDefault("isTaylor", "isTaylor")}', '${varMap.getOrDefault("isExact", "isExact")}' or '${varMap.getOrDefault("isAll", "isAll")}' when '${varMap.getOrDefault("nOrNLog", "nOrNLog")}' is not None.")
                     else if((isStirling || isExact || isTaylor) && isAll)
-                        throw Exception("${illegalInputString()}: flag '${varMap.getOrDefault("isAll", "isAll")}' was true and implicitly includes '${varMap.getOrDefault("isStirling", "isStirling")}', '${varMap.getOrDefault("isTaylor", "isTaylor")}' and '${varMap.getOrDefault("isExact", "isExact")}' set to True which should then not be set to True.")
+                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString()}: flag '${varMap.getOrDefault("isAll", "isAll")}' was true and implicitly includes '${varMap.getOrDefault("isStirling", "isStirling")}', '${varMap.getOrDefault("isTaylor", "isTaylor")}' and '${varMap.getOrDefault("isExact", "isExact")}' set to True which should then not be set to True.")
                     else if(!DecimalFns.isInteger(nOrNLog))
-                        throw Exception("${illegalInputString(varMap.getOrDefault("nOrDLog", "nOrDLog"))}: please provide an integer")
+                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString(varMap.getOrDefault("nOrDLog", "nOrDLog"))}: please provide an integer")
                     else if(DecimalFns.isLessThanZero(nOrNLog))
-                        throw Exception("${illegalInputString(varMap.getOrDefault("nOrDLog", "nOrDLog"))}: please provide a non-negative integer")
+                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString(varMap.getOrDefault("nOrDLog", "nOrDLog"))}: please provide a non-negative integer")
                 }
                 else {
                     checkDecimal(p!!, varMap.getOrDefault("p", "p"))
                     p as BigDecimal
                     if(isStirling || isExact || isTaylor)
-                         throw Exception("${illegalInputString()}: '${varMap.getOrDefault("isStirling", "isStirling")}', '${varMap.getOrDefault("isTaylor", "isTaylor")}' and '${varMap.getOrDefault("isExact", "isExact")}' or '${varMap.getOrDefault("isAll", "isAll")}' should only be non-false when '${varMap.getOrDefault("nOrDLog", "nOrDLog")}' is not null (with '${varMap.getOrDefault("p", "p")}' != null), Taylor approximation is always used).")
+                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString()}: '${varMap.getOrDefault("isStirling", "isStirling")}', '${varMap.getOrDefault("isTaylor", "isTaylor")}' and '${varMap.getOrDefault("isExact", "isExact")}' or '${varMap.getOrDefault("isAll", "isAll")}' should only be non-false when '${varMap.getOrDefault("nOrDLog", "nOrDLog")}' is not null (with '${varMap.getOrDefault("p", "p")}' != null), Taylor approximation is always used).")
                     else if(DecimalFns.isGreaterThanOne(p) || DecimalFns.isLessThanZero(p))
-                        throw Exception("${illegalInputString(varMap.getOrDefault("p", "p"))}: please provide a non-negative decimal number in the range [0.0, 1.0]")
+                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString(varMap.getOrDefault("p", "p"))}: please provide a non-negative decimal number in the range [0.0, 1.0]")
                 }
             }
 
@@ -1327,7 +1315,9 @@ class BirthdayProblem {
                     val params = setup(args)
 
                     if(params.dLog === null || params.dLog.scale() < 0) // implies the precision was not enough to store the size of this number, a scale had to be used
-                        throw Exception("couldn't setup calculations because input numbers were too large: the log of the resulting input set size D must not exceed 1000 digits.")
+                        throw SolverException(SolverErrorCode.DLOG_NOT_CALCULATED, inputMessage = "couldn't setup calculations because input numbers were too large: the log of the resulting input set size D must not exceed 1000 digits.")
+                    if(!params.isBinary && (params.d === null || params.d.scale() < 0)) // implies the precision was not enough to store the size of this number, a scale had to be used
+                        throw SolverException(SolverErrorCode.DLOG_NOT_CALCULATED, inputMessage = "couldn't setup calculations because input numbers were too large: the input set size D must not exceed 1000 digits.")
 
                     if(params.isJson)
                         return solveJson(params, isCLI)
@@ -1336,16 +1326,16 @@ class BirthdayProblem {
                 }
                 catch(e: Exception) {
                     if(isCLI) {
-                        println("Failed due to: ${e}")
-                        println("program terminated abnormally with exit code 1")
-                        exitProcess(1)
+                        System.err.println("Failed due to error: ${e.message?.toLowerCase()}")
+                        e.printStackTrace()
+                        exitProcess(if(e is SolverException) e.code.exitCode else 1)
                     }
                     else
                         throw e
                 }
             }
 
-            fun solveText(params: BirthdayProblemParameters, isCLI: Boolean): String {
+            private fun solveText(params: BirthdayProblemParameters, isCLI: Boolean): String {
                 val res = mutableListOf<String>()
                 val outputter: (s: String) -> Unit = { s -> if(isCLI) println(s); res.add(s); }
                 var pPercent: BigDecimal
@@ -1362,11 +1352,9 @@ class BirthdayProblem {
                         )
                     )
                     try {
-                        if(params.dLog === null)
-                            throw Exception("dLog was not successfully calculated and is needed for Taylor method.")
                         val (n, methodUsed) = BirthdayProblemSolverChecked.birthdayProblemInv(
                             params.d,
-                            params.dLog,
+                            params.dLog!!,
                             params.p,
                             params.isBinary
                         )
@@ -1382,7 +1370,12 @@ class BirthdayProblem {
                         )
                     }
                     catch(e: Exception) {
-                        outputter(BirthdayProblemTextFormatter.indented("N/A (Calculation failed)"))
+                        val methodText = BirthdayProblemTextFormatter.parenthesize(BirthdayProblemTextFormatter.methodToShortDescription(CalcPrecision.TAYLOR_APPROX))
+                        val errorText = "N/A (Calculation failed: ${e.message?.toLowerCase()}$methodText)"
+                        if(e is SolverException)
+                            outputter(BirthdayProblemTextFormatter.indented(errorText))
+                        else
+                            outputter(BirthdayProblemTextFormatter.indented(errorText))
                     }
                 }
                 else {
@@ -1404,18 +1397,12 @@ class BirthdayProblem {
                         (method, included) ->
                             if((included || params.isAll) && lastMethodUsed !== CalcPrecision.TRIVIAL) {
                                 try {
-                                    if(params.nLog === null || params.dLog === null)
-                                        throw Exception("dLog or nLog was not successfully calculated and are both needed for ${
-                                            BirthdayProblemTextFormatter.methodToText(
-                                                method
-                                            )
-                                        } method.")
                                     val (p, methodUsed) =
                                         BirthdayProblemSolverChecked.birthdayProblem(
                                             params.d,
-                                            params.dLog,
+                                            params.dLog!!,
                                             params.n,
-                                            params.nLog,
+                                            params.nLog!!,
                                             method,
                                             params.isBinary
                                         )
@@ -1431,9 +1418,12 @@ class BirthdayProblem {
                                     )
                                 }
                                 catch(e: Exception) {
-                                    results.add(Triple("N/A", "",  " (Calculation failed with this method" + BirthdayProblemTextFormatter.parenthesize(
-                                        BirthdayProblemTextFormatter.methodToShortDescription(method)
-                                    ) + ")"))
+                                    val methodText = BirthdayProblemTextFormatter.parenthesize(BirthdayProblemTextFormatter.methodToShortDescription(method))
+                                    val errorText = " (Calculation failed: ${e.message?.toLowerCase()}$methodText)"
+                                    if(e is SolverException)
+                                        results.add(Triple("N/A", "", errorText))
+                                    else
+                                        results.add(Triple("N/A", "", errorText))
                                 }
                             }
                     }
@@ -1458,8 +1448,8 @@ class BirthdayProblem {
                 return res.joinToString("\n")
             }
 
-            fun solveJson(params: BirthdayProblemParameters, isCLI: Boolean): String {
-                val result = BirthdayProblemResult()
+            private fun solveJson(params: BirthdayProblemParameters, isCLI: Boolean): String {
+                val result = BirthdayProblemResults()
                 var pPercent: BigDecimal
 
                 // do the calculations based on mode
@@ -1474,19 +1464,23 @@ class BirthdayProblem {
                     result.d = dText
                     result.p = pText
                     try {
-                        if(params.dLog === null)
-                            throw Exception("dLog was not successfully calculated and is needed for Taylor method.")
                         val (n, methodUsed) = BirthdayProblemSolverChecked.birthdayProblemInv(
                             params.d,
-                            params.dLog,
+                            params.dLog!!,
                             params.p,
                             params.isBinary
                         )
+                        val methodKey = BirthdayProblemTextFormatter.methodToText(methodUsed).toLowerCase()
                         val nText = BirthdayProblemTextFormatter.resultTextBirthdayProblemInvNumbers(n, params.isBinary, params.prec)
-                        result.results[BirthdayProblemTextFormatter.methodToText(methodUsed).toLowerCase()] = nText
+                        result.results[methodKey] = BirthdayProblemResult(result = nText)
                     }
                     catch(e: Exception) {
-                        result.results[BirthdayProblemTextFormatter.methodToText(CalcPrecision.TAYLOR_APPROX).toLowerCase()] = "N/A (Calculation failed)"
+                        val methodKey = BirthdayProblemTextFormatter.methodToText(CalcPrecision.TAYLOR_APPROX).toLowerCase()
+                        val errorMessage = e.message?.toLowerCase()
+                        if(e is SolverException)
+                            result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
+                        else
+                            result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
                     }
                 }
                 else {
@@ -1507,28 +1501,28 @@ class BirthdayProblem {
                             (method, included) ->
                         if((included || params.isAll) && lastMethodUsed !== CalcPrecision.TRIVIAL) {
                             try {
-                                if(params.nLog === null || params.dLog === null)
-                                    throw Exception("dLog or nLog was not successfully calculated and are both needed for ${
-                                        BirthdayProblemTextFormatter.methodToText(
-                                            method
-                                        )
-                                    } method.")
                                 val (p, methodUsed) =
                                     BirthdayProblemSolverChecked.birthdayProblem(
                                         params.d,
-                                        params.dLog,
+                                        params.dLog!!,
                                         params.n,
-                                        params.nLog,
+                                        params.nLog!!,
                                         method,
                                         params.isBinary
                                     )
                                 lastMethodUsed = methodUsed
                                 pPercent = DecimalFns.toPercent(p)
+                                val methodKey = BirthdayProblemTextFormatter.methodToText(methodUsed).toLowerCase()
                                 val pText = BirthdayProblemTextFormatter.resultTextBirthdayProblemNumbers(p, pPercent, params.prec).toList().joinToString("")
-                                result.results[BirthdayProblemTextFormatter.methodToText(methodUsed).toLowerCase()] = pText
+                                result.results[methodKey] = BirthdayProblemResult(result = pText)
                             }
                             catch(e: Exception) {
-                                result.results[BirthdayProblemTextFormatter.methodToText(method).toLowerCase()] = "N/A"
+                                val methodKey = BirthdayProblemTextFormatter.methodToText(method).toLowerCase()
+                                val errorMessage = e.message?.toLowerCase()
+                                if(e is SolverException)
+                                    result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
+                                else
+                                    result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
                             }
                         }
                     }
@@ -1575,10 +1569,15 @@ class BirthdayProblem {
     }
 
     data class BirthdayProblemResult(
+        val result: String? = null,
+        val error: String? = null
+    )
+
+    data class BirthdayProblemResults(
         var d: String? = null,
         var n: String? = null,
         var p: String? = null,
-        val results: MutableMap<String, String> = mutableMapOf()
+        val results: MutableMap<String, BirthdayProblemResult> = mutableMapOf()
     )
 
     private data class BirthdayProblemInputParameters(

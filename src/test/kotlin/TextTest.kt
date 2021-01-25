@@ -134,7 +134,7 @@ class TextTest {
                     true,
                     listOf(
                         "The probability of finding at least one non-unique sample among 2^1000000 samples, sampled uniformly at random from a set of 2^2000000 items, is:",
-                        "          N/A             (Calculation failed with this method (Exact method with Stirling's approximation))",
+                        "          N/A             (Calculation failed: needed precision for method exceeds maximum precision (Exact method with Stirling's approximation))",
                         "          ≈39.3469340287% (Taylor series approximation used in main calculation (removes need for factorial calculation))"
                     )
                 ),
@@ -235,8 +235,8 @@ class TextTest {
                     true,
                     listOf(
                         "The probability of finding at least one non-unique sample among 2^64 samples, sampled uniformly at random from a set of ≈2^43065219282621326757565580404980237828911.4871409133 items, is:",
-                        "          N/A (Calculation failed with this method (Exact method with Stirling's approximation))",
-                        "          N/A (Calculation failed with this method (Taylor approximation))"
+                        "          N/A (Calculation failed: d exceeds maximum size and is needed for method (Exact method with Stirling's approximation))",
+                        "          N/A (Calculation failed: overflow (Taylor approximation))"
                     )
                 ),
                 Arguments.of(
@@ -244,14 +244,14 @@ class TextTest {
                     true,
                     listOf(
                         "The probability of finding at least one non-unique sample among 2^640 samples, sampled uniformly at random from a set of ≈2^26614275474014559821953787196100807012412948367028783328633986189111799719299525295290069853854877867120534538070982737886888824825850066183609939356930416666755910887266773840385877776851876084664629106697034459995685244418266399190317043076208186461319737435225525519543453247219560088300601118286958869004726993677805799134087110255288245085785541666888810491274634074724367056992419344.3330052449 items, is:",
-                        "          N/A (Calculation failed with this method (Exact method with Stirling's approximation))",
-                        "          N/A (Calculation failed with this method (Taylor approximation))"
+                        "          N/A (Calculation failed: d exceeds maximum size and is needed for method (Exact method with Stirling's approximation))",
+                        "          N/A (Calculation failed: overflow (Taylor approximation))"
                     )
                 ),
                 Arguments.of(
                     "12800 -n 6400 -b -c -s -t",
                     false,
-                    null
+                    listOf("dLog exceeds maximum size and is needed to initialize calculations")
                 )
             )
     }
@@ -266,7 +266,10 @@ class TextTest {
             assertEquals(res, ans!!.joinToString("\n"))
         }
         else {
-            assertThrows { BirthdayProblem.CLISolver.solve(args) }
+            val e = assertThrows(BirthdayProblem.SolverException::class.java) {
+                BirthdayProblem.CLISolver.solve(args)
+            }
+            ans?.let { assertEquals(e.message, it.first()) }
         }
     }
 
