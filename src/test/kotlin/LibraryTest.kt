@@ -12,7 +12,7 @@ class LibraryTest {
     companion object {
 
         @JvmStatic
-        private fun provideTestData(): Stream<Arguments> =
+        fun provideTestData(): Stream<Arguments> =
             Stream.of(
                 Arguments.of(
                     BirthdayProblemInputSpec("1", "1", false, false, BirthdayProblem.CalcPrecision.EXACT),
@@ -299,7 +299,7 @@ class LibraryTest {
             )
 
         @JvmStatic
-        private fun provideInvertedTestData(): Stream<Arguments> =
+        fun provideInvertedTestData(): Stream<Arguments> =
             Stream.of(
                 Arguments.of(
                     InvertedBirthdayProblemInputSpec("1", "1", false, false, BirthdayProblem.CalcPrecision.EXACT),

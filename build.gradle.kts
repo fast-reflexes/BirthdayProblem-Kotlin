@@ -1,6 +1,6 @@
 plugins {
     java
-    kotlin("jvm") version "1.4.0"
+    kotlin("jvm") version "1.9.22"
     application
 }
 
@@ -12,16 +12,16 @@ repositories {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
-    implementation(files("lib/big-math-2.3.0.jar"))
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.11.+")
+    implementation(kotlin("stdlib"))
+    implementation(files("lib/big-math-2.3.2.jar"))
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
     implementation("com.xenomachina:kotlin-argparser:2.0.7")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.0")
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.0")
-    testImplementation("org.assertj:assertj-core:3.16.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.4.2")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.2")
+    testImplementation("org.assertj:assertj-core:3.24.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
 }
 
 repositories {
@@ -64,13 +64,13 @@ tasks.test {
 
 tasks {
     compileKotlin {
-        kotlinOptions.jvmTarget = "11"
+        kotlinOptions.jvmTarget = "17"
     }
     compileTestKotlin {
-        kotlinOptions.jvmTarget = "11"
+        kotlinOptions.jvmTarget = "17"
     }
 }
 
 application {
-    mainClassName = "com.bdayprob.BirthdayProblem\$CLISolver"
+    mainClass.set("com.bdayprob.BirthdayProblem\$CLISolver")
 }

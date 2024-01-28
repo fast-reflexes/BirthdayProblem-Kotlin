@@ -75,15 +75,15 @@ When using the project on the command-line, transitive dependencies need to be i
 
 To compile the project on command-line, make sure all the listed dependencies are available and execute:
 
-    > kotlinc -cp big-math-2.3.0.jar:kotlin-argparser-2.0.7.jar:jackson-core-2.11.3.jar:jackson-module-kotlin-2.11.3.jar:jackson-annotations-2.11.3.jar:jackson-databind-2.11.3.jar:. BirthdayProblemSolver.kt
+    > kotlinc -cp big-math-2.3.2.jar:kotlin-argparser-2.0.7.jar:jackson-core-2.11.3.jar:jackson-module-kotlin-2.11.3.jar:jackson-annotations-2.11.3.jar:jackson-databind-2.11.3.jar:. BirthdayProblemSolver.kt
 
 To run the compiled classes with arguments, execute (for example):
 
-    > kotlin -cp big-math-2.3.0.jar:xenocom-0.0.7.jar:kotlin-argparser-2.0.7.jar:jackson-core-2.11.3.jar:jackson-module-kotlin-2.11.3.jar:jackson-annotations-2.11.3.jar:jackson-databind-2.11.3.jar:. com.bdayprob.BirthdayProblem\$CLISolver 366 -n 23 -a
+    > kotlin -cp big-math-2.3.2.jar:xenocom-0.0.7.jar:kotlin-argparser-2.0.7.jar:jackson-core-2.11.3.jar:jackson-module-kotlin-2.11.3.jar:jackson-annotations-2.11.3.jar:jackson-databind-2.11.3.jar:. com.bdayprob.BirthdayProblem\$CLISolver 366 -n 23 -a
     
 To run the compiled thin jar with arguments (no dependencies included), execute (for example):
 
-    > kotlin -cp big-math-2.3.0.jar:xenocom-0.0.7.jar:kotlin-argparser-2.0.7.jar:jackson-core-2.11.3.jar:jackson-module-kotlin-2.11.3.jar:jackson-annotations-2.11.3.jar:jackson-databind-2.11.3.jar:BirthdayProblem-1.4.1.jar:. com.bdayprob.BirthdayProblem\$CLISolver 366 -n 23 -a
+    > kotlin -cp big-math-2.3.2.jar:xenocom-0.0.7.jar:kotlin-argparser-2.0.7.jar:jackson-core-2.11.3.jar:jackson-module-kotlin-2.11.3.jar:jackson-annotations-2.11.3.jar:jackson-databind-2.11.3.jar:BirthdayProblem-1.4.1.jar:. com.bdayprob.BirthdayProblem\$CLISolver 366 -n 23 -a
 
 To run the compiled fat jar with arguments (all dependencies included except Kotlin runtime), simply execute (for example):
 
@@ -141,8 +141,8 @@ The program can then be compiled using Gradle or on the command line. With Gradl
     
 To compile on the command line, either use the thin jar and include all dependencies
 
-    > kotlinc -cp big-math-2.3.0.jar:kotlin-argparser-2.0.7.jar:jackson-core-2.11.3.jar:jackson-module-kotlin-2.11.3.jar:jackson-annotations-2.11.3.jar:jackson-databind-2.11.3.jar:BirthdayProblem-1.4.1.jar:. Program.kt // compile
-    > kotlin -cp big-math-2.3.0.jar:xenocom-0.0.7.jar:kotlin-argparser-2.0.7.jar:jackson-core-2.11.3.jar:jackson-module-kotlin-2.11.3.jar:jackson-annotations-2.11.3.jar:jackson-databind-2.11.3.jar:BirthdayProblem-1.4.1.jar:. ProgramKt// run
+    > kotlinc -cp big-math-2.3.2.jar:kotlin-argparser-2.0.7.jar:jackson-core-2.11.3.jar:jackson-module-kotlin-2.11.3.jar:jackson-annotations-2.11.3.jar:jackson-databind-2.11.3.jar:BirthdayProblem-1.4.1.jar:. Program.kt // compile
+    > kotlin -cp big-math-2.3.2.jar:xenocom-0.0.7.jar:kotlin-argparser-2.0.7.jar:jackson-core-2.11.3.jar:jackson-module-kotlin-2.11.3.jar:jackson-annotations-2.11.3.jar:jackson-databind-2.11.3.jar:BirthdayProblem-1.4.1.jar:. ProgramKt// run
 or use the fat jar:
 
     > kotlinc -cp BirthdayProblem-1.4.1-fat.jar Program.kt // compile

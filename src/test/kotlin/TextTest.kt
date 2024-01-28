@@ -10,7 +10,7 @@ class TextTest {
     companion object {
 
         @JvmStatic
-        private fun provideTestData(): Stream<Arguments> =
+        fun provideTestData(): Stream<Arguments> =
             Stream.of(
                 Arguments.of(
                     "1 -p 1.0 -a",

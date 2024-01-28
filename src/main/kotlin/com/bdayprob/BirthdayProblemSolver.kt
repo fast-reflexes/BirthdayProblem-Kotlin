@@ -1423,7 +1423,7 @@ class BirthdayProblem {
                 }
                 catch(e: Exception) {
                     if(isCLI) {
-                        System.err.println("Failed due to error: ${e.message?.toLowerCase()}")
+                        System.err.println("Failed due to error: ${e.message?.lowercase()}")
                         e.printStackTrace()
                         exitProcess(if(e is SolverException) e.code.exitCode else 1)
                     }
@@ -1477,7 +1477,7 @@ class BirthdayProblem {
                                 val methodText = BirthdayProblemTextFormatter.parenthesize(
                                     BirthdayProblemTextFormatter.methodToShortDescription(CalcPrecision.TAYLOR_APPROX)
                                 )
-                                val errorText = " (Calculation failed: ${e.message?.toLowerCase()}$methodText)"
+                                val errorText = " (Calculation failed: ${e.message?.lowercase()}$methodText)"
                                 if (e is SolverException)
                                     results.add(Triple("N/A", "", errorText))
                                 else
@@ -1525,7 +1525,7 @@ class BirthdayProblem {
                                 }
                                 catch(e: Exception) {
                                     val methodText = BirthdayProblemTextFormatter.parenthesize(BirthdayProblemTextFormatter.methodToShortDescription(method))
-                                    val errorText = " (Calculation failed: ${e.message?.toLowerCase()}$methodText)"
+                                    val errorText = " (Calculation failed: ${e.message?.lowercase()}$methodText)"
                                     if(e is SolverException)
                                         results.add(Triple("N/A", "", errorText))
                                     else
@@ -1585,7 +1585,7 @@ class BirthdayProblem {
                                     params.isBinary
                                 )
                                 lastMethodUsed = methodUsed
-                                val methodKey = BirthdayProblemTextFormatter.methodToText(methodUsed).toLowerCase()
+                                val methodKey = BirthdayProblemTextFormatter.methodToText(methodUsed).lowercase()
                                 val nText = BirthdayProblemTextFormatter.resultTextBirthdayProblemInvNumbers(
                                     n,
                                     params.isBinary,
@@ -1593,8 +1593,8 @@ class BirthdayProblem {
                                 ).toList().joinToString("")
                                 result.results[methodKey] = BirthdayProblemResult(result = nText)
                             } catch (e: Exception) {
-                                val methodKey = BirthdayProblemTextFormatter.methodToText(method).toLowerCase()
-                                val errorMessage = e.message?.toLowerCase()
+                                val methodKey = BirthdayProblemTextFormatter.methodToText(method).lowercase()
+                                val errorMessage = e.message?.lowercase()
                                 if (e is SolverException)
                                     result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
                                 else
@@ -1631,13 +1631,13 @@ class BirthdayProblem {
                                     )
                                 lastMethodUsed = methodUsed
                                 pPercent = DecimalFns.toPercent(p)
-                                val methodKey = BirthdayProblemTextFormatter.methodToText(methodUsed).toLowerCase()
+                                val methodKey = BirthdayProblemTextFormatter.methodToText(methodUsed).lowercase()
                                 val pText = BirthdayProblemTextFormatter.resultTextBirthdayProblemNumbers(p, pPercent, params.prec).toList().joinToString("")
                                 result.results[methodKey] = BirthdayProblemResult(result = pText)
                             }
                             catch(e: Exception) {
-                                val methodKey = BirthdayProblemTextFormatter.methodToText(method).toLowerCase()
-                                val errorMessage = e.message?.toLowerCase()
+                                val methodKey = BirthdayProblemTextFormatter.methodToText(method).lowercase()
+                                val errorMessage = e.message?.lowercase()
                                 if(e is SolverException)
                                     result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
                                 else

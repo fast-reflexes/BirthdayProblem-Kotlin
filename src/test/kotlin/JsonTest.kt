@@ -14,7 +14,7 @@ class JsonTest {
     companion object {
 
         @JvmStatic
-        private fun provideTestData(): Stream<Arguments> =
+        fun provideTestData(): Stream<Arguments> =
             Stream.of(
                 Arguments.of("1 -p 1.0 -a", true, """{ "d": "1", "p": "100%", "results": { "trivial": { "result": "2" } } }"""),
                 Arguments.of("1 -p 0.0 -a", true, """{ "d": "1", "p": "0%", "results": { "trivial": { "result": "1" } } }"""),
