@@ -4,7 +4,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -19,13 +18,16 @@ class JsonTest {
             Stream.of(
                 Arguments.of("1 -p 1.0 -a", true, """{ "d": "1", "p": "100%", "results": { "trivial": { "result": "2" } } }"""),
                 Arguments.of("1 -p 0.0 -a", true, """{ "d": "1", "p": "0%", "results": { "trivial": { "result": "1" } } }"""),
-                Arguments.of("1 -p 0.5 -a", true, """{ "d": "1", "p": "50%", "results": { "taylor": { "result": "2" } } }"""),
-                Arguments.of("1000000000 -p 0.0000001", true, """{ "d": "1000000000 (=10^9)", "p": "0.00001% (=10^-7)", "results": { "taylor": { "result": "15" } } }"""),
+                Arguments.of("1 -p 0.5 -a", true, """{ "d": "1", "p": "50%", "results": { "trivial": { "result": "2" } } }"""),
+                Arguments.of("1000000000 -p 0.0000001 -t", true, """{ "d": "1000000000 (=10^9)", "p": "0.00001% (=10^-7)", "results": { "taylor": { "result": "15" } } }"""),
                 Arguments.of("1 -n 1 -a", true, """{ "d": "1", "n": "1", "results": { "trivial": { "result": "0%" } } }"""),
                 Arguments.of("1 -n 0 -a", true, """{ "d": "1", "n": "0", "results": { "trivial": { "result": "0%" } } }"""),
                 Arguments.of("1 -n 2 -a", true, """{ "d": "1", "n": "2", "results": { "trivial": { "result": "100%" } } }"""),
+                Arguments.of("69 -p 0.5 -a", true, """{ "d": "69", "p": "50%", "results": { "exact": {"result": "11"}, "taylor": {"result": "10"} } }"""),
+                Arguments.of("83 -p 0.5 -a", true, """{ "d": "83", "p": "50%", "results": { "exact": {"result": "12"}, "taylor": {"result": "11"} } }"""),
+                Arguments.of("1000000000 -p 0.5 -a", true, """{ "d": "1000000000 (=10^9)", "p": "50%", "results": { "exact": {"result": "37234"}, "taylor": {"result": "37233"} } }"""),
                 Arguments.of("366 -n 23 -a", true, """{ "d": "366", "n": "23", "results": { "exact": { "result": "≈50.6323011819%" }, "taylor": { "result": "≈51.4549326419%" }, "stirling": { "result": "≈50.6315474495%" } } }"""),
-                Arguments.of("366 -p 0.5", true, """{ "d": "366", "p": "50%", "results": { "taylor": { "result": "23" } } }"""),
+                Arguments.of("366 -p 0.5 -a", true, """{ "d": "366", "p": "50%", "results": { "taylor": { "result": "23" }, "exact": { "result": "23" } } }"""),
                 Arguments.of(
                     "6274264876827642864872634872364782634 -n 2376287346287353638 -s -t",
                     true,
@@ -45,13 +47,13 @@ class JsonTest {
                 Arguments.of("128 -n 0 -b -s -t", true, """{ "d": "2^128", "n": "2^0", "results": { "trivial": { "result": "0%" } } }"""),
                 Arguments.of("128 -n 129 -b -s -t", true, """{ "d": "2^128", "n": "2^129", "results": { "trivial": { "result": "100%" } } }"""),
                 Arguments.of("128 -n 64 -b -s -t", true, """{ "d": "2^128", "n": "2^64", "results": { "stirling": { "result": "≈39.3469340287%" }, "taylor": { "result": "≈39.3469340287%" } } }"""),
-                Arguments.of("128 -p 0.5 -b", true, """{ "d": "2^128", "p": "50%", "results": { "taylor": { "result": "≈2^64.2356168135" } } }"""),
+                Arguments.of("128 -p 0.5 -b -t", true, """{ "d": "2^128", "p": "50%", "results": { "taylor": { "result": "≈2^64.2356168135" } } }"""),
                 Arguments.of("2000000 -n 1000000 -b -s -t", true, """{ "d": "2^2000000", "n": "2^1000000", "results": { "stirling": { "error": "needed precision for method exceeds maximum precision" }, "taylor": { "result": "≈39.3469340287%" } } }"""),
-                Arguments.of("2000000 -p 0.5 -b", true, """{ "d": "2^2000000", "p": "50%", "results": { "taylor": { "result": "≈2^1000000.2356168135" } } }"""),
+                Arguments.of("2000000 -p 0.5 -b -t", true, """{ "d": "2^2000000", "p": "50%", "results": { "taylor": { "result": "≈2^1000000.2356168135" } } }"""),
                 Arguments.of("8 -n 3 -b -a", true, """{ "d": "2^8", "n": "2^3", "results": { "exact": { "result": "≈10.4576930892%" }, "stirling": { "result": "≈10.4567528314%" }, "taylor": { "result": "≈11.7503097415%" } } }"""),
                 Arguments.of("256 -n 8 -a", true, """{ "d": "256", "n": "8", "results": { "exact": { "result": "≈10.4576930892%" }, "stirling": { "result": "≈10.4567528314%" }, "taylor": { "result": "≈11.7503097415%" } } }"""),
-                Arguments.of("52 -p 0.1 -c", true, """{ "d": "≈80529020383886612857810199580012764961409004334781435987268084328737 (≈8*10^67)", "p": "10%", "results": { "taylor": { "result": "4119363813276486714957808853108064 (≈4*10^33)" } } }"""),
-                Arguments.of("52 -p 0.5 -c", true, """{ "d": "≈80529020383886612857810199580012764961409004334781435987268084328737 (≈8*10^67)", "p": "50%", "results": { "taylor": { "result": "10565837726592754214318243269428637 (≈10^34)" } } }"""),
+                Arguments.of("52 -p 0.1 -c -t", true, """{ "d": "≈80529020383886612857810199580012764961409004334781435987268084328737 (≈8*10^67)", "p": "10%", "results": { "taylor": { "result": "4119363813276486714957808853108064 (≈4*10^33)" } } }"""),
+                Arguments.of("52 -p 0.5 -c -t", true, """{ "d": "≈80529020383886612857810199580012764961409004334781435987268084328737 (≈8*10^67)", "p": "50%", "results": { "taylor": { "result": "10565837726592754214318243269428637 (≈10^34)" } } }"""),
                 Arguments.of(
                     "52 -n 10000000000000000000 -c -s -t",
                     true,

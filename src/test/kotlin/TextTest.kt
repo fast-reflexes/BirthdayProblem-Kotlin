@@ -1,6 +1,5 @@
 import com.bdayprob.BirthdayProblem
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -34,11 +33,11 @@ class TextTest {
                     true,
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of 1 items, needed to have at least a 50% chance of a non-unique sample is:",
-                        "          2 (Taylor series approximation used in main calculation)"
+                        "          2 (Trivial solution)"
                     )
                 ),
                 Arguments.of(
-                    "1000000000 -p 0.0000001",
+                    "1000000000 -p 0.0000001 -t",
                     true,
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of 1000000000 (=10^9) items, needed to have at least a 0.00001% (=10^-7) chance of a non-unique sample is:",
@@ -70,6 +69,33 @@ class TextTest {
                     )
                 ),
                 Arguments.of(
+                    "69 -p 0.5 -a",
+                    true,
+                    listOf(
+                        "The number of samples, sampled uniformly at random from a set of 69 items, needed to have at least a 50% chance of a non-unique sample is:",
+                        "          11 (Exact method)",
+                        "          10 (Taylor series approximation used in main calculation)"
+                    )
+                ),
+                Arguments.of(
+                    "83 -p 0.5 -a",
+                    true,
+                    listOf(
+                        "The number of samples, sampled uniformly at random from a set of 83 items, needed to have at least a 50% chance of a non-unique sample is:",
+                        "          12 (Exact method)",
+                        "          11 (Taylor series approximation used in main calculation)"
+                    )
+                ),
+                Arguments.of(
+                    "1000000000 -p 0.5 -a",
+                    true,
+                    listOf(
+                        "The number of samples, sampled uniformly at random from a set of 1000000000 (=10^9) items, needed to have at least a 50% chance of a non-unique sample is:",
+                        "          37234 (Exact method)",
+                        "          37233 (Taylor series approximation used in main calculation)"
+                    )
+                ),
+                Arguments.of(
                     "366 -n 23 -a",
                     true,
                     listOf(
@@ -80,10 +106,11 @@ class TextTest {
                     )
                 ),
                 Arguments.of(
-                    "366 -p 0.5",
+                    "366 -p 0.5 -a",
                     true,
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of 366 items, needed to have at least a 50% chance of a non-unique sample is:",
+                        "          23 (Exact method)",
                         "          23 (Taylor series approximation used in main calculation)"
                     )
                 ),
@@ -122,7 +149,7 @@ class TextTest {
                     )
                 ),
                 Arguments.of(
-                    "128 -p 0.5 -b",
+                    "128 -p 0.5 -b -t",
                     true,
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of 2^128 items, needed to have at least a 50% chance of a non-unique sample is:",
@@ -139,7 +166,7 @@ class TextTest {
                     )
                 ),
                 Arguments.of(
-                    "2000000 -p 0.5 -b",
+                    "2000000 -p 0.5 -b -t",
                     true,
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of 2^2000000 items, needed to have at least a 50% chance of a non-unique sample is:",
@@ -167,7 +194,7 @@ class TextTest {
                     )
                 ),
                 Arguments.of(
-                    "52 -p 0.1 -c",
+                    "52 -p 0.1 -c -t",
                     true,
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of ≈80529020383886612857810199580012764961409004334781435987268084328737 (≈8*10^67) items, needed to have at least a 10% chance of a non-unique sample is:",
@@ -175,7 +202,7 @@ class TextTest {
                     )
                 ),
                 Arguments.of(
-                    "52 -p 0.5 -c",
+                    "52 -p 0.5 -c -t",
                     true,
                     listOf(
                         "The number of samples, sampled uniformly at random from a set of ≈80529020383886612857810199580012764961409004334781435987268084328737 (≈8*10^67) items, needed to have at least a 50% chance of a non-unique sample is:",

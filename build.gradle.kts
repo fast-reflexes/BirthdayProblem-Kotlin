@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.bdayprob"
-version = "1.3"
+version = "1.4.1"
 
 repositories {
     mavenCentral()
