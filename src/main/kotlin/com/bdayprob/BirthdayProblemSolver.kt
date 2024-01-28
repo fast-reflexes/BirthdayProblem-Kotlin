@@ -205,7 +205,7 @@ class BirthdayProblem {
             // faculty method wrapper for both natural and base-2 logarithms
             fun facultyLog(n: BigDecimal, nLog: BigDecimal, isLog2: Boolean): BigDecimal {
                 if (isZero(n)) // n == 0
-                    return ONE
+                    return ZERO
                 else {
                     if (isLog2)
                         return facultyStirlingLog2(n, nLog)
@@ -225,7 +225,7 @@ class BirthdayProblem {
              *              =	ln((n/e)^n) + ln(sqrt(2 * pi * n))
              *              =	n(ln(n/e)) + ln((2 * pi * n)^(1/2))
              *              =	n(ln(n) - ln(e)) + 0.5(ln(2) + ln(pi) + ln(n))
-             *              = 	n(nLogE - 1) + 0.5(LOG_E_2 + LOG_E_PI + nLogE
+             *              = 	n(nLogE - 1) + 0.5(LOG_E_2 + LOG_E_PI + nLogE)
             */
             // in e-log space
             fun facultyStirlingLogE(n: BigDecimal, nLogE: BigDecimal): BigDecimal {
@@ -324,7 +324,7 @@ class BirthdayProblem {
              * in base-2 logarithmic form. If isCombinations is true, then dOrDLog is the number of members, s, of a set from which we should generate the sample set d (s!). If both isBinary and
              * isCombinations are true, then dOrDLog is the base-2 logarithm of the number of members, s, of a set from which we should generate the sample set d ((2^s)!).
              */
-            fun solveForN(dOrDLog: BigDecimal, pIn: BigDecimal, isBinary: Boolean, isCombinations: Boolean): Pair<BigDecimal, CalcPrecision> {
+            fun solveForN(dOrDLog: BigDecimal, pIn: BigDecimal, isBinary: Boolean, isCombinations: Boolean, method: CalcPrecision): Pair<BigDecimal, CalcPrecision> {
                 DecimalContext.reset() // reset to initial context precision
                 BirthdayProblemInputHandler.sanitize(
                     dOrDLog,
@@ -341,7 +341,7 @@ class BirthdayProblem {
                 val (d, dLog) = dPair
                 if(dLog === null)
                     throw SolverException(SolverErrorCode.DLOG_NOT_CALCULATED)
-                return BirthdayProblemSolverChecked.birthdayProblemInv(d, dLog, p!!, isBinary)
+                return BirthdayProblemSolverChecked.birthdayProblemInv(d, dLog, p!!, method, isBinary)
             }
 
         }
@@ -367,6 +367,8 @@ class BirthdayProblem {
                 calcPrecision: CalcPrecision,
                 dIsLog2: Boolean
             ): Pair<BigDecimal, CalcPrecision> {
+                // NOTE that dLog and nLog are 2 OR e base logarithms depending on input processing reflected in dIsLog2
+
                 if ((dIsLog2 && DecimalFns.isLessThanOne(nLog)) || (!dIsLog2 && DecimalFns.isLessThan(
                         nLog,
                         DecimalFns.LOG_E_2
@@ -432,6 +434,7 @@ class BirthdayProblem {
                 maybeD: BigDecimal?,
                 dLog: BigDecimal,
                 p: BigDecimal,
+                calcPrecision: CalcPrecision,
                 dIsLog2: Boolean
             ): Pair<BigDecimal, CalcPrecision> {
                 if (DecimalFns.isZero(p))
@@ -447,33 +450,58 @@ class BirthdayProblem {
                         return Pair(
                             maybeD
                                 ?.let {
-                                    BigDecimalMath.log(it.add(DecimalFns.ONE, DecimalContext.ctx),
+                                    BigDecimalMath.log(
+                                        it.add(DecimalFns.ONE, DecimalContext.ctx),
                                         DecimalContext.ctx
                                     ).divide(DecimalFns.LOG_E_2, DecimalContext.ctx)
                                 }
                                 ?: dLog,
                             CalcPrecision.TRIVIAL)
                     else
-                        // if d is too large to calculate adding 1 to it is negligible
-                        return Pair(maybeD?.add(DecimalFns.ONE, DecimalContext.ctx) ?: dLog,
+                    // if d is too large to calculate adding 1 to it is negligible
+                        return Pair(
+                            maybeD?.add(DecimalFns.ONE, DecimalContext.ctx) ?: dLog,
                             CalcPrecision.TRIVIAL
                         )
+                } else if(DecimalFns.isZero(dLog)) {
+                    // set size is 1 and p is neither 0 nor 1, for ANY p in between 0 and 1, 2 samples are required to get a non-unique sample
+                    return Pair(if(dIsLog2) DecimalFns.ONE else DecimalFns.TWO, CalcPrecision.TRIVIAL)
                 } else {
+                    if (listOf(CalcPrecision.EXACT).contains(calcPrecision) && maybeD === null)
+                        // d is needed for these methods
+                        throw SolverException(SolverErrorCode.D_NEEDED_FOR_METHOD, calcPrecision)
+
                     // carry out the calculations
                     DecimalContext.adjustPrecision((maybeD ?: dLog).run { precision() - scale() })
-                    if (DecimalContext.isTooPrecise()) {
-                        DecimalContext.adjustPrecision(dLog.run { precision() - scale() })
+                    if(calcPrecision === CalcPrecision.EXACT) {
                         if (DecimalContext.isTooPrecise())
                             // with a too high precision, even the simplest calculation takes too long
-                            throw SolverException(SolverErrorCode.TOO_HIGH_PRECISION, CalcPrecision.TAYLOR_APPROX)
+                            throw SolverException(SolverErrorCode.TOO_HIGH_PRECISION, calcPrecision)
+                        if (dIsLog2)
+                            return Pair(
+                                BigDecimalMath.log(
+                                    birthdayProblemInvExact(maybeD!!, p),
+                                    DecimalContext.ctx
+                                ).divide(DecimalFns.LOG_E_2, DecimalContext.ctx),
+                                CalcPrecision.EXACT
+                            )
+                        else
+                            return Pair(birthdayProblemInvExact(maybeD!!, p), CalcPrecision.EXACT)
+                    } else {
+                        if (DecimalContext.isTooPrecise()) {
+                            DecimalContext.adjustPrecision(dLog.run { precision() - scale() })
+                            if (DecimalContext.isTooPrecise())
+                                // with a too high precision, even the simplest calculation takes too long
+                                throw SolverException(SolverErrorCode.TOO_HIGH_PRECISION, CalcPrecision.TAYLOR_APPROX)
+                        }
+                        if (dIsLog2)
+                            return Pair(birthdayProblemInvTaylorApproxLog2(dLog, p), CalcPrecision.TAYLOR_APPROX)
+                        else
+                            return Pair(
+                                BigDecimalMath.exp(birthdayProblemInvTaylorApproxLogE(dLog, p), DecimalContext.ctx),
+                                CalcPrecision.TAYLOR_APPROX
+                            )
                     }
-                    if (dIsLog2)
-                        return Pair(birthdayProblemInvTaylorApproxLog2(dLog, p), CalcPrecision.TAYLOR_APPROX)
-                    else
-                        return Pair(
-                            BigDecimalMath.exp(birthdayProblemInvTaylorApproxLogE(dLog, p), DecimalContext.ctx),
-                            CalcPrecision.TAYLOR_APPROX
-                        )
                 }
             }
 
@@ -486,7 +514,7 @@ class BirthdayProblem {
             ######################################################################################################################################################################################################*/
 
             /**
-             * 	A frequent formula in the context of the birthday problem (or paradox) calculates that chance of no two items being equal (all items unique) when drawing d (picked) items from a population of
+             * 	A frequent formula in the context of the birthday problem (or paradox) calculates the chance of no two items being equal (all items unique) when drawing d (picked) items from a population of
              * 	n(possibilities) items. Since we can choose unique items from n in (n)_d ways, and you can pick d items (any) from n in n^d, the formula for this is:
              *
              * 	    ^P(n, d) 	= (n)_d / n^d
@@ -494,8 +522,8 @@ class BirthdayProblem {
              *  In log space, this is:
              *
              *      lg(^P(n, d))= lg((n)_d / n^d)
-             *                  = ln((n)_d) - lg(n^d)
-             *                  = ln((n)_d) - d * lg(n)
+             *                  = lg((n)_d) - lg(n^d)
+             *                  = lg((n)_d) - d * lg(n)
              *
              * This result calculates the chance of all items unique, but most often, we are interested in the chance of there being at least one (trivially two) non-unique item(s) among dm P(n, d), which is
              * why we take the complement of ^P(n, d) as the final result of these functions.
@@ -544,6 +572,9 @@ class BirthdayProblem {
              *
              *      P(n, d) 			~ 1 - e^(-(n^2/2d))
              *
+             * 		NOTE: this is really an approximation of the approximation; substitute n^2 for n * (n - 1) is possible
+             * 		for a more accurate formula.
+             *
              *  This implies that
              *
              *      ^P(n, d)			~ e^(-(n^2/2d))
@@ -570,6 +601,11 @@ class BirthdayProblem {
              *
              *      lg(-ln(^P(n, d)))	~ 2 * lg(n) - (lg(2) + lg(d))
              *                          = 2 * nLog2 - (1 + dLog2)
+             *
+             *		Connecting back to the previous NOTE, 2 * lg(n) comes from lg(n^2), with the more accurate formula we would
+             * 		instead have lg(n * (n - 1)) which equals lg(n) + lg(n - 1). This requires us to have n available. Note that
+             * 		on a simplistic note, one might be aware of this improvement but still omit it since we then stay more true to
+             * 		the approximation in use here. Therefore it has been omitted below.
              */
 
             // calculates result in base-2 logarithms (second level of logs)
@@ -598,6 +634,11 @@ class BirthdayProblem {
              *
              *      ln(-ln(^P(n, d)))	~ 2 * ln(n) - (ln(2) + ln(d))
              *                          = 2 * nLogE - (LOG_E_2 + dLogE)
+             *
+             *		Again connecting back to the previous NOTE, 2 * ln(n) comes from ln(n^2), with the more accurate formula we
+             * 		would instead have ln(n * (n - 1)) which equals ln(n) + ln(n - 1). This requires us to have n available. Note
+             * 		that on a simplistic note, one might be aware of this improvement but still omit it since we then stay more
+             * 		true to the approximation in use here. Therefore it has been omitted below.
              */
 
             // calculates result in natural logarithmic space
@@ -614,6 +655,57 @@ class BirthdayProblem {
                 val negProb = BigDecimalMath.exp(negProbLogE, DecimalContext.ctx)
                 val prob = DecimalFns.ONE.subtract(negProb, DecimalContext.ctx) // complement
                 return prob
+            }
+
+            /**
+             * 		The formula for the forward birthday problem is
+             *
+             * 		    P(n, d) 			= 1 - (1 - 1/d) * (1 - 2/d) * ... * (1 - (n - 1)/d)
+             * 		    P(n, d) 			= 1 - ((d - 1)/d) * ((d - 2)/d) * ... * ((d - (n - 1))/d)
+             *
+             * 		Remember, this P(n, d) is the probability of a collision.
+             *
+             * 		which leads to
+             * 			^P(n, d)			= ((d - 1)/d) * ((d - 2)/d) * ... * ((d - (n - 1))/d)
+             *
+             * 		which is the probability of all unique, which in log space is
+             *
+             * 			ln(^P(n, d))		= ln(((d - 1)/d) * ((d - 2)/d) * ... * ((d - (n - 1))/d))
+             * 								= ln((d - 1)/d) + ln((d - 2)/d) + ... + ln((d - (n - 1))/d)
+             * 								= ln(d - 1) - ln(d) + ln(d - 2) - ln(d) + ... + ln(d - (n - 1)) - ln(d)
+             *
+             * 		We want to find n such that P(n, d) >= Pin (input p), e.g. the number of samples needed for the probability of a
+             * 		collision to be equal to or higher than Pin. This means that we need to find n such that P^(n, d) < 1 - Pin.
+             * 		The first such value for n entails a P(n, d) >= Pin. In log space y = ln(x), probabilities from 0 to 1 map to
+             * 		y value from negative infinity to 0. We start with a single sample for which the probability of all samples
+             * 		unique is 1. For every added sample, this probability decreases towards 1 - Pin until it is less than 1 - Pin
+             * 		at which point we have found the relevant n.
+             *
+             * 		If we want to use a naive and exact method, we can calculate n numerically by adding one term to the sum until
+             * 		ln(^P(n, d)) <= ln(1 - P)
+             *
+             * 		Note that for some reason, these calculations are faster in non-logarithmic space, perhaps due to the ln
+             * 		operation taking more time than is won off of using add / subtract in logarithmic space rather than multiply
+             * 		/ divide in regular space.
+             *
+             * 		Also note that the first term in the above calculation is really 1 with a probability of all unique being 1.
+             * 		Already when we calculate 1 * (d - 1 /d) we are assuming 2 samples. Thus the value of n is really reflecting
+             * 		how many ADDITIONAL people to the initial one that is needed for the calculated probability. We thus make
+             * 		up for this by adding 1 to the final result.
+             */
+            fun birthdayProblemInvExact(d: BigDecimal, p: BigDecimal): BigDecimal {
+                val pInv = DecimalFns.ONE.subtract(p, DecimalContext.ctx)
+                var n = DecimalFns.ONE
+                var currentPInv = d.subtract(n, DecimalContext.ctx).divide(d, DecimalContext.ctx)
+                while(DecimalFns.isGreaterThan(currentPInv, pInv)) {
+                    n = n.add(DecimalFns.ONE, DecimalContext.ctx)
+                    currentPInv = currentPInv.multiply(
+                        d.subtract(n, DecimalContext.ctx).divide(d, DecimalContext.ctx),
+                        DecimalContext.ctx
+                    )
+                }
+                val final = n.add(DecimalFns.ONE, DecimalContext.ctx)
+                return final
             }
 
             /**
@@ -656,6 +748,11 @@ class BirthdayProblem {
              *      lg(n(P, d))			~ 0.5 * ( ln(-ln(1 - P)) + ln(2) + ln(d))
              *                          = 0.5 * ( ln(-ln(1 - p)) + LOG_E_2 + dLogE )
              *
+             * 	    NOTE that this calculation uses the approximation of the approximation using n^2 instead of the more accurate
+             * 		n * (n - 1). Of course this is necessary here since we need to be able to do the root calculation to arrive at
+             * 		an answer. The forward formula however may take (it currently doesn't) the less coarse approximation into
+             * 		account whereby the forward and backward calculations may differ when verifying n(P, d) in P(n, d) with the
+             * 		Taylor approximation.
              */
 
             // with base e logarithms
@@ -860,7 +957,7 @@ class BirthdayProblem {
                 return "The number of samples, sampled uniformly at random from a set of $dText items, needed to have at least a $pText chance of a non-unique sample is:"
             }
 
-            fun resultTextBirthdayProblemInvNumbers(n: BigDecimal, isLog2: Boolean, prec: Int? = null): String {
+            fun resultTextBirthdayProblemInvNumbers(n: BigDecimal, isLog2: Boolean, prec: Int? = null): Pair<String, String> {
                 val (nLog2Text, nLog10Text, nTextPair) = isLog2.let {
                     if (it)
                         Triple(
@@ -876,7 +973,7 @@ class BirthdayProblem {
                         )
                 }
                 val (prefix, nText) = nTextPair
-                return prefix + nLog2Text + nText + nLog10Text
+                return prefix + nLog2Text + nText to nLog10Text
             }
 
             fun resultTextBirthdayProblemInv(
@@ -884,9 +981,9 @@ class BirthdayProblem {
                 isLog2: Boolean,
                 method: CalcPrecision,
                 prec: Int? = null
-            ): String {
-                val nText = resultTextBirthdayProblemInvNumbers(n, isLog2, prec)
-                return nText + parenthesize(methodToDescription(method, true))
+            ): Triple<String, String, String> {
+                val (nText, nLog10Text) = resultTextBirthdayProblemInvNumbers(n, isLog2, prec)
+                return Triple(nText, nLog10Text, parenthesize(methodToDescription(method, true)))
             }
 
             fun headerTextBirthdayProblemNumbers(
@@ -1015,9 +1112,9 @@ class BirthdayProblem {
                     checkDecimal(nOrNLog, varMap.getOrDefault("nOrDLog", "nOrDLog"))
                     nOrNLog as BigDecimal
                     if(!isStirling && !isExact && !isTaylor && !isAll)
-                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString()}: must set at least one of '${varMap.getOrDefault("isStirling", "isStirling")}', '${varMap.getOrDefault("isTaylor", "isTaylor")}', '${varMap.getOrDefault("isExact", "isExact")}' or '${varMap.getOrDefault("isAll", "isAll")}' when '${varMap.getOrDefault("nOrNLog", "nOrNLog")}' is not None.")
+                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString()}: must set at least one of '${varMap.getOrDefault("isStirling", "isStirling")}', '${varMap.getOrDefault("isTaylor", "isTaylor")}', '${varMap.getOrDefault("isExact", "isExact")}' or '${varMap.getOrDefault("isAll", "isAll")}'.")
                     else if((isStirling || isExact || isTaylor) && isAll)
-                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString()}: flag '${varMap.getOrDefault("isAll", "isAll")}' was true and implicitly includes '${varMap.getOrDefault("isStirling", "isStirling")}', '${varMap.getOrDefault("isTaylor", "isTaylor")}' and '${varMap.getOrDefault("isExact", "isExact")}' set to True which should then not be set to True.")
+                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString()}: flag '${varMap.getOrDefault("isAll", "isAll")}' was true and implicitly includes '${varMap.getOrDefault("isStirling", "isStirling")}' (with -n), '${varMap.getOrDefault("isTaylor", "isTaylor")}' and '${varMap.getOrDefault("isExact", "isExact")}' set to True which should then not be set to True.")
                     else if(!DecimalFns.isInteger(nOrNLog))
                         throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString(varMap.getOrDefault("nOrDLog", "nOrDLog"))}: please provide an integer")
                     else if(DecimalFns.isLessThanZero(nOrNLog))
@@ -1026,8 +1123,8 @@ class BirthdayProblem {
                 else {
                     checkDecimal(p!!, varMap.getOrDefault("p", "p"))
                     p as BigDecimal
-                    if(isStirling || isExact || isTaylor)
-                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString()}: '${varMap.getOrDefault("isStirling", "isStirling")}', '${varMap.getOrDefault("isTaylor", "isTaylor")}' and '${varMap.getOrDefault("isExact", "isExact")}' or '${varMap.getOrDefault("isAll", "isAll")}' should only be non-false when '${varMap.getOrDefault("nOrDLog", "nOrDLog")}' is not null (with '${varMap.getOrDefault("p", "p")}' != null), Taylor approximation is always used).")
+                    if(isStirling)
+                        throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString()}: '${varMap.getOrDefault("isStirling", "isStirling")}' should only be non-false when '${varMap.getOrDefault("nOrDLog", "nOrDLog")}' is not null.")
                     else if(DecimalFns.isGreaterThanOne(p) || DecimalFns.isLessThanZero(p))
                         throw SolverException(SolverErrorCode.BAD_INPUT, inputMessage = "${illegalInputString(varMap.getOrDefault("p", "p"))}: please provide a non-negative decimal number in the range [0.0, 1.0]")
                 }
@@ -1125,7 +1222,7 @@ class BirthdayProblem {
             val probability by parser.storing(
                 "-p",
                 "--probability",
-                help = "Input number P in [0.0, 1.0], the the probability of at least one non-unique item among the samples. When present the needed number of samples N will be approximated with Taylor series."
+                help = "Input number P in [0.0, 1.0], the probability of at least one non-unique item among the samples. When present the needed number of samples N will be calculated. Requires one of flags -e, -t or -a to determine the desired precision(s) of the calculation."
             ).default<String?>(null)
 
             val binary by parser.flagging(
@@ -1142,7 +1239,7 @@ class BirthdayProblem {
             val taylor by parser.flagging(
                 "-t",
                 "--taylor",
-                help = "Use Taylor approximation to calculate the birthday problem (only with flag -n) (best suited for extremely large numbers)"
+                help = "Use Taylor approximation to calculate the birthday problem (best suited for extremely large numbers)"
             )
             val stirling by parser.flagging(
                 "-s",
@@ -1152,12 +1249,12 @@ class BirthdayProblem {
             val exact by parser.flagging(
                 "-e",
                 "--exact",
-                help = "Use exact method (only with flag -n) (WARNING! This method becomes too slow very quickly as calculations grow with complexity O(N!) where N is the size of the sampled set) (best suited for smaller numbers)"
+                help = "Use exact method (WARNING! This method becomes too slow very quickly as calculations grow with complexity O(N!) where N is the size of the sampled set) (best suited for smaller numbers)"
             )
             val all by parser.flagging(
                 "-a",
                 "--all",
-                help = "Use all methods for the calculation (same as using flags -e, -s, -t when used with -n, otherwise it has no effect)"
+                help = "Use all methods for the calculation (same as using flags -e, -s, -t when used with -n, otherwise same as using flags -e, -t)"
             )
             val json by parser.flagging(
                 "-j",
@@ -1184,12 +1281,12 @@ class BirthdayProblem {
                     "\n" +
                     "\n" +
                     "Supports calculating both the probability P from N and D (using exact method, exact method with Stirling's approximation in the calculation of faculties and Taylor approximation) and " +
-                    "N from D and P (Taylor approximation only). Both approximations get asymptotically close to the exact result as D grows towards infinity. The exact method should not be used for larger " +
-                    "numbers. For extremely small probabilities P, the exact method with Stirling's approximation used for faculties may become unstable as it involves many more different operations than " +
-                    "the Taylor approximation which, each, results in small round-offs. Another source of error in this case arises from the use of Stirling's formula for two calculations of faculties (D! " +
-                    "and (D - N)!). Since one of these ((D - N)!) diverges slightly more from the exact result than the other (D!), the difference between these (used for calculations in log space) might " +
-                    "introduce small errors when P is extremely small. A good check to see whether the approximation in question is suffering or not is to compare it to the Taylor approximation and see " +
-                    "whether they match well." +
+                    "N from D and P (using exact method and Taylor approximation). Both approximations get asymptotically close to the exact result as D grows towards infinity. The exact method should not " +
+                    "be used for larger numbers. For extremely small probabilities P, the exact method with Stirling's approximation used for faculties may become unstable as it involves many more different " +
+                    "operations than the Taylor approximation which, each, results in small round-offs. Another source of error in this case arises from the use of Stirling's formula for two calculations of " +
+                    "faculties (D! and (D - N)!). Since one of these ((D - N)!) diverges slightly more from the exact result than the other (D!), the difference between these (used for calculations in log " +
+                    "space) might introduce small errors when P is extremely small. A good check to see whether the approximation in question is suffering or not is to compare it to the Taylor approximation " +
+                    "and see whether they match well." +
                     "\n" +
                     "\n" +
                     "Inputs D and N can be seen as literal input numbers or as exponents of base 2 (with -b flag). Furthermore, input D can be seen as a set of items from which we should produce the D! " +
@@ -1208,9 +1305,9 @@ class BirthdayProblem {
                     "\n" +
                     "    Example 2:" +
                     "\n\n" +
-                    "\tCalculate the number of times N a deck of cards has to be shuffled to have a P = 50% probability of seeing a repeated shuffle:" +
+                    "\tCalculate, with Taylor approximation, the number of times N a deck of cards has to be shuffled to have a P = 50% probability of seeing a repeated shuffle:" +
                     "\n\n" +
-                    "\t\t> python BirthdayProblem.py 52 -p 0.5 -c" +
+                    "\t\t> python BirthdayProblem.py 52 -p 0.5 -t -c" +
                     "\n" +
                     "\n" +
                     "    Example 3:" +
@@ -1230,12 +1327,12 @@ class BirthdayProblem {
                         throw SystemExitException("Please provide one of flags -n or -p with corresponding argument.", 1)
                     else if(args.probability !== null && args.samples !== null)
                         throw SystemExitException("Please provide EITHER a flag -n or -p, not both.", 1)
-                    else if(args.samples !== null && !args.stirling && !args.exact && !args.taylor && !args.all)
-                        throw SystemExitException("Must set at least one of flags -s, -t, -e or -a together with -n.", 1)
-                    else if((args.stirling || args.exact || args.taylor) && args.samples === null)
-                        throw SystemExitException("Flags -s, -t and -e should only be used with flag -n (with flag -p, Taylor approximation is always used).", 1)
+                    else if(!args.stirling && !args.exact && !args.taylor && !args.all)
+                        throw SystemExitException("Must set at least one of flags -s, -t, -e or -a.", 1)
+                    else if(args.stirling && args.samples === null)
+                        throw SystemExitException("Flags -s should only be used with flag -n.", 1)
                     else if((args.stirling || args.exact || args.taylor) && args.all)
-                        throw SystemExitException("Flag -a was set and implicitly includes -s, -t and -e which should then not be used.", 1)
+                        throw SystemExitException("Flag -a was set and implicitly includes -s (with -n), -t and -e which should then not be used.", 1)
                     else if(!"""[\d]+""".toRegex().matches(args.d))
                         throw SystemExitException("Illegal input for D: please provide a non-negative integer with digits only", 1)
                     else if(args.samples !== null && !"""[\d]+""".toRegex().matches(args.samples!!))
@@ -1326,7 +1423,7 @@ class BirthdayProblem {
                 }
                 catch(e: Exception) {
                     if(isCLI) {
-                        System.err.println("Failed due to error: ${e.message?.toLowerCase()}")
+                        System.err.println("Failed due to error: ${e.message?.lowercase()}")
                         e.printStackTrace()
                         exitProcess(if(e is SolverException) e.code.exitCode else 1)
                     }
@@ -1340,6 +1437,9 @@ class BirthdayProblem {
                 val outputter: (s: String) -> Unit = { s -> if(isCLI) println(s); res.add(s); }
                 var pPercent: BigDecimal
 
+                var lastMethodUsed: CalcPrecision? = null
+                val results = mutableListOf<Triple<String, String, String>>()
+
                 // do the calculations based on mode
                 if(params.p !== null) {
                     outputter(
@@ -1351,31 +1451,39 @@ class BirthdayProblem {
                             params.prec
                         )
                     )
-                    try {
-                        val (n, methodUsed) = BirthdayProblemSolverChecked.birthdayProblemInv(
-                            params.d,
-                            params.dLog!!,
-                            params.p,
-                            params.isBinary
-                        )
-                        outputter(
-                            BirthdayProblemTextFormatter.indented(
-                                BirthdayProblemTextFormatter.resultTextBirthdayProblemInv(
-                                    n,
-                                    params.isBinary,
-                                    methodUsed,
-                                    params.prec
+                    listOf(
+                        Pair(CalcPrecision.EXACT, params.isExact),
+                        Pair(CalcPrecision.TAYLOR_APPROX, params.isTaylor)
+                    ).forEach { (method, included) ->
+                        if ((included || params.isAll) && lastMethodUsed !== CalcPrecision.TRIVIAL) {
+                            try {
+                                val (n, methodUsed) = BirthdayProblemSolverChecked.birthdayProblemInv(
+                                    params.d,
+                                    params.dLog!!,
+                                    params.p,
+                                    method,
+                                    params.isBinary
                                 )
-                            )
-                        )
-                    }
-                    catch(e: Exception) {
-                        val methodText = BirthdayProblemTextFormatter.parenthesize(BirthdayProblemTextFormatter.methodToShortDescription(CalcPrecision.TAYLOR_APPROX))
-                        val errorText = "N/A (Calculation failed: ${e.message?.toLowerCase()}$methodText)"
-                        if(e is SolverException)
-                            outputter(BirthdayProblemTextFormatter.indented(errorText))
-                        else
-                            outputter(BirthdayProblemTextFormatter.indented(errorText))
+                                lastMethodUsed = methodUsed
+                                results.add(
+                                    BirthdayProblemTextFormatter.resultTextBirthdayProblemInv(
+                                        n,
+                                        params.isBinary,
+                                        methodUsed,
+                                        params.prec
+                                    )
+                                )
+                            } catch (e: Exception) {
+                                val methodText = BirthdayProblemTextFormatter.parenthesize(
+                                    BirthdayProblemTextFormatter.methodToShortDescription(CalcPrecision.TAYLOR_APPROX)
+                                )
+                                val errorText = " (Calculation failed: ${e.message?.lowercase()}$methodText)"
+                                if (e is SolverException)
+                                    results.add(Triple("N/A", "", errorText))
+                                else
+                                    results.add(Triple("N/A", "", errorText))
+                            }
+                        }
                     }
                 }
                 else {
@@ -1387,8 +1495,6 @@ class BirthdayProblem {
                             params.prec
                         )
                     )
-                    var lastMethodUsed: CalcPrecision? = null
-                    val results = mutableListOf<Triple<String, String, String>>()
                     listOf(
                         Pair(CalcPrecision.EXACT, params.isExact),
                         Pair(CalcPrecision.STIRLING_APPROX, params.isStirling),
@@ -1419,7 +1525,7 @@ class BirthdayProblem {
                                 }
                                 catch(e: Exception) {
                                     val methodText = BirthdayProblemTextFormatter.parenthesize(BirthdayProblemTextFormatter.methodToShortDescription(method))
-                                    val errorText = " (Calculation failed: ${e.message?.toLowerCase()}$methodText)"
+                                    val errorText = " (Calculation failed: ${e.message?.lowercase()}$methodText)"
                                     if(e is SolverException)
                                         results.add(Triple("N/A", "", errorText))
                                     else
@@ -1427,23 +1533,23 @@ class BirthdayProblem {
                                 }
                             }
                     }
-                    val (maxLenRes, maxLenLog10Repr) =
-                        results
-                            .map{ (res, log10ReprRes, _) -> Pair(res.length, log10ReprRes.length) }
-                            .unzip()
-                            .toList()
-                            .map{ it.maxOrNull() }
-                    results.forEach {
+                }
+                val (maxLenRes, maxLenLog10Repr) =
+                    results
+                        .map{ (res, log10ReprRes, _) -> Pair(res.length, log10ReprRes.length) }
+                        .unzip()
+                        .toList()
+                        .map{ it.maxOrNull() }
+                results.forEach {
                         (resText, log10Repr, methodText) ->
-                            outputter(
-                                BirthdayProblemTextFormatter.indented(
-                                    resText.padEnd(
-                                        maxLenRes!!,
-                                        ' '
-                                    ) + log10Repr.padEnd(maxLenLog10Repr!!, ' ') + methodText
-                                )
-                            )
-                    }
+                    outputter(
+                        BirthdayProblemTextFormatter.indented(
+                            resText.padEnd(
+                                maxLenRes!!,
+                                ' '
+                            ) + log10Repr.padEnd(maxLenLog10Repr!!, ' ') + methodText
+                        )
+                    )
                 }
                 return res.joinToString("\n")
             }
@@ -1451,6 +1557,8 @@ class BirthdayProblem {
             private fun solveJson(params: BirthdayProblemParameters, isCLI: Boolean): String {
                 val result = BirthdayProblemResults()
                 var pPercent: BigDecimal
+
+                var lastMethodUsed: CalcPrecision? = null
 
                 // do the calculations based on mode
                 if(params.p !== null) {
@@ -1463,24 +1571,36 @@ class BirthdayProblem {
                     )
                     result.d = dText
                     result.p = pText
-                    try {
-                        val (n, methodUsed) = BirthdayProblemSolverChecked.birthdayProblemInv(
-                            params.d,
-                            params.dLog!!,
-                            params.p,
-                            params.isBinary
-                        )
-                        val methodKey = BirthdayProblemTextFormatter.methodToText(methodUsed).toLowerCase()
-                        val nText = BirthdayProblemTextFormatter.resultTextBirthdayProblemInvNumbers(n, params.isBinary, params.prec)
-                        result.results[methodKey] = BirthdayProblemResult(result = nText)
-                    }
-                    catch(e: Exception) {
-                        val methodKey = BirthdayProblemTextFormatter.methodToText(CalcPrecision.TAYLOR_APPROX).toLowerCase()
-                        val errorMessage = e.message?.toLowerCase()
-                        if(e is SolverException)
-                            result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
-                        else
-                            result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
+                    listOf(
+                        Pair(CalcPrecision.EXACT, params.isExact),
+                        Pair(CalcPrecision.TAYLOR_APPROX, params.isTaylor)
+                    ).forEach { (method, included) ->
+                        if ((included || params.isAll) && lastMethodUsed !== CalcPrecision.TRIVIAL) {
+                            try {
+                                val (n, methodUsed) = BirthdayProblemSolverChecked.birthdayProblemInv(
+                                    params.d,
+                                    params.dLog!!,
+                                    params.p,
+                                    method,
+                                    params.isBinary
+                                )
+                                lastMethodUsed = methodUsed
+                                val methodKey = BirthdayProblemTextFormatter.methodToText(methodUsed).lowercase()
+                                val nText = BirthdayProblemTextFormatter.resultTextBirthdayProblemInvNumbers(
+                                    n,
+                                    params.isBinary,
+                                    params.prec
+                                ).toList().joinToString("")
+                                result.results[methodKey] = BirthdayProblemResult(result = nText)
+                            } catch (e: Exception) {
+                                val methodKey = BirthdayProblemTextFormatter.methodToText(method).lowercase()
+                                val errorMessage = e.message?.lowercase()
+                                if (e is SolverException)
+                                    result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
+                                else
+                                    result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
+                            }
+                        }
                     }
                 }
                 else {
@@ -1492,7 +1612,6 @@ class BirthdayProblem {
                     )
                     result.d = dText
                     result.n = nText
-                    var lastMethodUsed: CalcPrecision? = null
                     listOf(
                         Pair(CalcPrecision.EXACT, params.isExact),
                         Pair(CalcPrecision.STIRLING_APPROX, params.isStirling),
@@ -1512,13 +1631,13 @@ class BirthdayProblem {
                                     )
                                 lastMethodUsed = methodUsed
                                 pPercent = DecimalFns.toPercent(p)
-                                val methodKey = BirthdayProblemTextFormatter.methodToText(methodUsed).toLowerCase()
+                                val methodKey = BirthdayProblemTextFormatter.methodToText(methodUsed).lowercase()
                                 val pText = BirthdayProblemTextFormatter.resultTextBirthdayProblemNumbers(p, pPercent, params.prec).toList().joinToString("")
                                 result.results[methodKey] = BirthdayProblemResult(result = pText)
                             }
                             catch(e: Exception) {
-                                val methodKey = BirthdayProblemTextFormatter.methodToText(method).toLowerCase()
-                                val errorMessage = e.message?.toLowerCase()
+                                val methodKey = BirthdayProblemTextFormatter.methodToText(method).lowercase()
+                                val errorMessage = e.message?.lowercase()
                                 if(e is SolverException)
                                     result.results[methodKey] = BirthdayProblemResult(error = errorMessage)
                                 else
@@ -1543,8 +1662,8 @@ class BirthdayProblem {
             fun solveForP(dOrDLog: BigDecimal, nOrNLog: BigDecimal, isBinary: Boolean, isCombinations: Boolean, method: CalcPrecision) =
                 BirthdayProblemSolver.solveForP(dOrDLog, nOrNLog, isBinary, isCombinations, method)
 
-            fun solveForN(dOrDLog: BigDecimal, p: BigDecimal, isBinary: Boolean, isCombinations: Boolean) =
-                BirthdayProblemSolver.solveForN(dOrDLog, p, isBinary, isCombinations)
+            fun solveForN(dOrDLog: BigDecimal, p: BigDecimal, isBinary: Boolean, isCombinations: Boolean, method: CalcPrecision) =
+                BirthdayProblemSolver.solveForN(dOrDLog, p, isBinary, isCombinations, method)
 
         }
 
