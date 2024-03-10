@@ -197,49 +197,49 @@ class LibraryTest {
                 Arguments.of(
                     BirthdayProblemInputSpec("52", "10000000000000000000000000000000000", false, true, BirthdayProblem.CalcPrecision.STIRLING_APPROX),
                     true,
-                    "0.462536366051" to BirthdayProblem.CalcPrecision.STIRLING_APPROX,
+                    "0.462001746672" to BirthdayProblem.CalcPrecision.STIRLING_APPROX,
                     null
                 ),
                 Arguments.of(
                     BirthdayProblemInputSpec("52", "10000000000000000000000000000000000", false, true, BirthdayProblem.CalcPrecision.TAYLOR_APPROX),
                     true,
-                    "0.462536366051" to BirthdayProblem.CalcPrecision.TAYLOR_APPROX,
+                    "0.462001746672" to BirthdayProblem.CalcPrecision.TAYLOR_APPROX,
                     null
                 ),
                 Arguments.of(
                     BirthdayProblemInputSpec("4", "18", true, true, BirthdayProblem.CalcPrecision.EXACT),
                     true,
-                    "0.001649423866" to BirthdayProblem.CalcPrecision.EXACT,
+                    "0.001640861961" to BirthdayProblem.CalcPrecision.EXACT,
                     null
                 ),
                 Arguments.of(
                     BirthdayProblemInputSpec("4", "18", true, true, BirthdayProblem.CalcPrecision.STIRLING_APPROX),
                     true,
-                    "0.001649422224" to BirthdayProblem.CalcPrecision.STIRLING_APPROX,
+                    "0.001640861961" to BirthdayProblem.CalcPrecision.STIRLING_APPROX,
                     null
                 ),
                 Arguments.of(
                     BirthdayProblemInputSpec("4", "18", true, true, BirthdayProblem.CalcPrecision.TAYLOR_APPROX),
                     true,
-                    "0.001649428504" to BirthdayProblem.CalcPrecision.TAYLOR_APPROX,
+                    "0.001640868208" to BirthdayProblem.CalcPrecision.TAYLOR_APPROX,
                     null
                 ),
                 Arguments.of(
                     BirthdayProblemInputSpec("16", "262144", false, true, BirthdayProblem.CalcPrecision.EXACT),
                     true,
-                    "0.001649423866" to BirthdayProblem.CalcPrecision.EXACT,
+                    "0.001640861961" to BirthdayProblem.CalcPrecision.EXACT,
                     null
                 ),
                 Arguments.of(
                     BirthdayProblemInputSpec("16", "262144", false, true, BirthdayProblem.CalcPrecision.STIRLING_APPROX),
                     true,
-                    "0.001649422224" to BirthdayProblem.CalcPrecision.STIRLING_APPROX,
+                    "0.001640861961" to BirthdayProblem.CalcPrecision.STIRLING_APPROX,
                     null
                 ),
                 Arguments.of(
                     BirthdayProblemInputSpec("16", "262144", false, true, BirthdayProblem.CalcPrecision.TAYLOR_APPROX),
                     true,
-                    "0.001649428504" to BirthdayProblem.CalcPrecision.TAYLOR_APPROX,
+                    "0.001640868208" to BirthdayProblem.CalcPrecision.TAYLOR_APPROX,
                     null
                 ),
                 Arguments.of(
@@ -406,14 +406,20 @@ class LibraryTest {
                 Arguments.of(
                     InvertedBirthdayProblemInputSpec("52", "0.1", false, true, BirthdayProblem.CalcPrecision.TAYLOR_APPROX),
                     true,
-                    "4119363813276486714957808853108064" to BirthdayProblem.CalcPrecision.TAYLOR_APPROX,
+                    "4122665867622533660736208120290868" to BirthdayProblem.CalcPrecision.TAYLOR_APPROX,
                     null
                 ),
                 Arguments.of(
                     InvertedBirthdayProblemInputSpec("52", "0.5", false, true, BirthdayProblem.CalcPrecision.TAYLOR_APPROX),
                     true,
-                    "10565837726592754214318243269428637" to BirthdayProblem.CalcPrecision.TAYLOR_APPROX,
+                    "10574307231100289363611308602026252" to BirthdayProblem.CalcPrecision.TAYLOR_APPROX,
                     null
+                ),
+                Arguments.of(
+                    InvertedBirthdayProblemInputSpec("1280", "0.5", true, true, BirthdayProblem.CalcPrecision.EXACT),
+                    false,
+                    null,
+                    "d exceeds maximum size and is needed for method"
                 )
             )
     }

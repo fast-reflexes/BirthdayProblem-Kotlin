@@ -202,6 +202,19 @@ class BirthdayProblem {
                 return nTakeMFacLogE
             }
 
+            fun facultyNaive(n: BigDecimal): BigDecimal {
+                var nFac = ONE
+                var i = n.toBigInteger()
+                while (isGreaterThan(i, BigInteger.ZERO)) {
+                    nFac = nFac.multiply(
+                        i.toBigDecimal(0, DecimalContext.ctx),
+                        DecimalContext.ctx
+                    )
+                    i = i.subtract(BigInteger.ONE)
+                }
+                return nFac
+            }
+
             // faculty method wrapper for both natural and base-2 logarithms
             fun facultyLog(n: BigDecimal, nLog: BigDecimal, isLog2: Boolean): BigDecimal {
                 if (isZero(n)) // n == 0
@@ -1047,6 +1060,12 @@ class BirthdayProblem {
 
         companion object {
 
+            /* threshold for resulting log2 d size input under which we use the exact naive method for calculating inputs with
+            both -c and -b flags (for too large inputs we will get overflow when calculating d which is needed for the naive
+            method but d is not really needed to solve the problem in log 2 space so then we downgrade to Sterling's
+            approximation when processing the inputs instead). The used threshold implies naive calculation of 32768! */
+            val LOG2_THRESHOLD_FOR_NAIVE_CALCULATION_OF_D_FOR_COMBINATIONS_AND_BINARY = BigDecimal("15") // corresponds to 32768
+
             fun illegalInputString(varName: String? = null) =
                 if(varName === null) "Illegal input" else "Illegal input for '$varName'"
 
@@ -1149,16 +1168,27 @@ class BirthdayProblem {
                     if (isCombinations) {
                         // d is the size of a set of items, calculate the number of permutations that is possible with it
                         if (isBinary) {
-                            dLog = DecimalFns.facultyLog(
-                                BigDecimalMath.pow(DecimalFns.TWO, dOrDLog, DecimalContext.ctx),
-                                dOrDLog,
-                                true
-                            )
-                            d = BigDecimalMath.pow(DecimalFns.TWO, dLog, DecimalContext.ctx)
+                            if(DecimalFns.isGreaterThan(dOrDLog, LOG2_THRESHOLD_FOR_NAIVE_CALCULATION_OF_D_FOR_COMBINATIONS_AND_BINARY)) {
+                                // use approximation
+                                dLog = DecimalFns.facultyLog(
+                                    BigDecimalMath.pow(DecimalFns.TWO, dOrDLog, DecimalContext.ctx),
+                                    dOrDLog,
+                                    true
+                                )
+                                d = BigDecimalMath.pow(DecimalFns.TWO, dLog, DecimalContext.ctx)
+                            } else {
+                                // use exact calculation
+                                d = BigDecimalMath.pow(DecimalFns.TWO, dOrDLog, DecimalContext.ctx)
+                                d = DecimalFns.facultyNaive(d)
+                                dLog = BigDecimalMath
+                                    .log(d, DecimalContext.ctx)
+                                    .divide(DecimalFns.LOG_E_2, DecimalContext.ctx)
+                            }
                         } else {
-                            dLog =
-                                DecimalFns.facultyLog(dOrDLog, BigDecimalMath.log(dOrDLog, DecimalContext.ctx), false)
-                            d = BigDecimalMath.exp(dLog, DecimalContext.ctx)
+                            // here we always need to display d in the output so if we can't calculate it, the request will fail,
+                            //therefore we can just calculate it in a naive way without log space
+                            d = DecimalFns.facultyNaive(dOrDLog)
+                            dLog = BigDecimalMath.log(d, DecimalContext.ctx)
                         }
                     } else {
                         // d is already the size of the set of combinations
@@ -1475,7 +1505,7 @@ class BirthdayProblem {
                                 )
                             } catch (e: Exception) {
                                 val methodText = BirthdayProblemTextFormatter.parenthesize(
-                                    BirthdayProblemTextFormatter.methodToShortDescription(CalcPrecision.TAYLOR_APPROX)
+                                    BirthdayProblemTextFormatter.methodToShortDescription(method)
                                 )
                                 val errorText = " (Calculation failed: ${e.message?.lowercase()}$methodText)"
                                 if (e is SolverException)
